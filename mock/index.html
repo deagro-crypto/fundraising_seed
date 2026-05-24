@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DeAgro · Fundraising CRM (mock)</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="container header-content">
+      <div class="logo-container">
+        <span class="logo">DeAgro · Fundraising</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#dashboard" class="nav-link active" data-view="dashboard">Rodada</a>
+        <a href="#funds" class="nav-link" data-view="funds">Fundos</a>
+        <a href="#rounds" class="nav-link" data-view="rounds">Rodadas</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container app">
+
+    <!-- =================== DASHBOARD =================== -->
+    <section id="view-dashboard" class="view">
+      <div class="view-header">
+        <div>
+          <h2 id="round-name">Seed 2026</h2>
+          <p class="muted">Status atual da rodada ativa</p>
+        </div>
+        <button class="btn-secondary" id="edit-round-btn">Editar rodada</button>
+      </div>
+
+      <div class="round-progress card">
+        <div class="round-progress__row">
+          <div>
+            <div class="muted">Target</div>
+            <div class="big" id="round-target">US$ 0</div>
+          </div>
+          <div>
+            <div class="muted">Comitado</div>
+            <div class="big" id="round-committed">US$ 0</div>
+          </div>
+          <div>
+            <div class="muted">Em diligência</div>
+            <div class="big" id="round-pipeline">US$ 0</div>
+          </div>
+          <div>
+            <div class="muted">% rodada</div>
+            <div class="big" id="round-pct">0%</div>
+          </div>
+        </div>
+        <div class="bar"><div class="bar__fill" id="round-bar"></div></div>
+        <div class="tier-split" id="tier-split"></div>
+      </div>
+
+      <h3 style="margin-top:2rem">Pipeline ativo</h3>
+      <div class="pipeline" id="pipeline"></div>
+    </section>
+
+    <!-- =================== FUNDS =================== -->
+    <section id="view-funds" class="view hidden">
+      <div class="view-header">
+        <div>
+          <h2>Fundos</h2>
+          <p class="muted">CRUD de fundos potenciais — filtre por tier, foco, geografia ou status</p>
+        </div>
+        <button class="btn-primary" id="new-fund-btn">+ Novo fundo</button>
+      </div>
+
+      <div class="tabs" id="tier-tabs">
+        <button class="tab active" data-tier="all">Todos</button>
+        <button class="tab" data-tier="1">Tier 1</button>
+        <button class="tab" data-tier="2">Tier 2</button>
+        <button class="tab" data-tier="3">Tier 3</button>
+      </div>
+
+      <div class="filters card">
+        <input id="filter-q" type="search" placeholder="Buscar nome ou tese…" />
+        <select id="filter-focus">
+          <option value="">Foco (todos)</option>
+          <option>Impacto</option>
+          <option>Tech</option>
+          <option>Blockchain</option>
+          <option>Crypto</option>
+        </select>
+        <select id="filter-latam">
+          <option value="">LATAM (todos)</option>
+          <option value="yes">Sim</option>
+          <option value="no">Não</option>
+        </select>
+        <select id="filter-status">
+          <option value="">Status (todos)</option>
+        </select>
+        <button class="btn-ghost" id="clear-filters">Limpar</button>
+      </div>
+
+      <div class="table-wrap card">
+        <table class="funds-table">
+          <thead>
+            <tr>
+              <th>Fundo</th>
+              <th>Tier</th>
+              <th>Foco</th>
+              <th>LATAM</th>
+              <th>Status</th>
+              <th class="right">Proposto</th>
+              <th class="right">Comitado</th>
+              <th>Tese / Obs</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="funds-tbody"></tbody>
+        </table>
+        <div id="empty-state" class="empty hidden">Nenhum fundo bate com os filtros.</div>
+      </div>
+    </section>
+
+    <!-- =================== ROUNDS =================== -->
+    <section id="view-rounds" class="view hidden">
+      <div class="view-header">
+        <div>
+          <h2>Rodadas</h2>
+          <p class="muted">CRUD de rodadas de captação</p>
+        </div>
+        <button class="btn-primary" id="new-round-btn">+ Nova rodada</button>
+      </div>
+      <div class="table-wrap card">
+        <table class="funds-table">
+          <thead>
+            <tr><th>Nome</th><th>Target</th><th>Comitado</th><th>Status</th><th>Aberta em</th><th></th></tr>
+          </thead>
+          <tbody id="rounds-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- =================== MODAL FUNDO =================== -->
+  <div class="modal hidden" id="fund-modal">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__panel">
+      <div class="modal__header">
+        <h3 id="fund-modal-title">Novo fundo</h3>
+        <button class="icon-btn" data-close>×</button>
+      </div>
+      <form id="fund-form" class="modal__body">
+        <input type="hidden" name="id" />
+        <div class="grid-2">
+          <label>Nome
+            <input name="name" required />
+          </label>
+          <label>Website
+            <input name="website" type="url" placeholder="https://…" />
+          </label>
+          <label>Tier
+            <select name="tier" required>
+              <option value="1">Tier 1</option>
+              <option value="2">Tier 2</option>
+              <option value="3">Tier 3</option>
+            </select>
+          </label>
+          <label>Localização
+            <input name="location" placeholder="São Paulo, BR" />
+          </label>
+          <label>Formato de trabalho
+            <select name="work_format">
+              <option value="">—</option>
+              <option>Lead</option>
+              <option>Follow</option>
+              <option>SAFE only</option>
+              <option>Equity</option>
+              <option>Token / SAFT</option>
+            </select>
+          </label>
+          <label>Status
+            <select name="status"></select>
+          </label>
+          <label>Ticket proposto (US$)
+            <input name="proposed_ticket" type="number" min="0" step="1000" />
+          </label>
+          <label>Ticket comitado (US$)
+            <input name="committed_ticket" type="number" min="0" step="1000" />
+          </label>
+        </div>
+
+        <fieldset class="focus-fs">
+          <legend>Foco</legend>
+          <label class="chk"><input type="checkbox" name="focus" value="Impacto" /> Impacto</label>
+          <label class="chk"><input type="checkbox" name="focus" value="Tech" /> Tech</label>
+          <label class="chk"><input type="checkbox" name="focus" value="Blockchain" /> Blockchain</label>
+          <label class="chk"><input type="checkbox" name="focus" value="Crypto" /> Crypto</label>
+          <label class="chk"><input type="checkbox" name="latam" /> LATAM</label>
+        </fieldset>
+
+        <label>Tese
+          <textarea name="thesis" rows="2" placeholder="Tese principal do fundo"></textarea>
+        </label>
+        <label>Observações (DeAgro + advisor)
+          <textarea name="notes" rows="3" placeholder="Notas livres compartilhadas"></textarea>
+        </label>
+
+        <div class="modal__footer">
+          <button type="button" class="btn-ghost" data-close>Cancelar</button>
+          <button type="button" class="btn-danger hidden" id="delete-fund-btn">Excluir</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =================== MODAL RODADA =================== -->
+  <div class="modal hidden" id="round-modal">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__panel small">
+      <div class="modal__header">
+        <h3 id="round-modal-title">Nova rodada</h3>
+        <button class="icon-btn" data-close>×</button>
+      </div>
+      <form id="round-form" class="modal__body">
+        <input type="hidden" name="id" />
+        <label>Nome
+          <input name="name" required placeholder="Seed 2026" />
+        </label>
+        <div class="grid-2">
+          <label>Target (US$)
+            <input name="target" type="number" min="0" step="1000" required />
+          </label>
+          <label>Status
+            <select name="status">
+              <option value="open">Aberta</option>
+              <option value="closed">Fechada</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn-ghost" data-close>Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
