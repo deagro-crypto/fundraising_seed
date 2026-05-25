@@ -47,12 +47,12 @@ h3{font-size:1.05rem;color:var(--primary-dark);font-weight:700;margin-bottom:.75
   z-index:1000;padding:.6rem 0;
 }
 .header-content{display:flex;justify-content:space-between;align-items:center}
-.logo-container{display:flex;align-items:center;gap:.75rem}
-.logo-img{height:40px;width:auto;display:block}
+.logo-container{display:flex;align-items:center;gap:.9rem}
+.logo-img{height:32px;width:auto;display:block}
 .logo-suffix{
-  font-size:.85rem;font-weight:500;color:var(--dark-gray);
-  padding-left:.75rem;border-left:1px solid var(--medium-gray);
-  letter-spacing:.02em;
+  font-size:1.1rem;font-weight:600;color:var(--primary-dark);
+  padding-left:.9rem;border-left:1px solid var(--medium-gray);
+  letter-spacing:.01em;
 }
 .nav-links{display:flex;gap:.25rem}
 .nav-links a{
