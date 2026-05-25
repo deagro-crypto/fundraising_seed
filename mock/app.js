@@ -78,7 +78,13 @@ let state = {
     committed_ticket: (i % 9 === 0) ? 250000 : 0,
   })),
   rounds: [
-    { id: uid(), name: 'Seed 2026', target: 4000000, status: 'open', opened_at: '2026-01-15' },
+    {
+      id: uid(), name: 'Seed 2026', target: 4000000, status: 'open',
+      opened_at: '2026-01-15',
+      estrategia: 'Captar com fundos de impacto + tech LATAM como âncoras, depois abrir cheques menores com fundos cripto globais para diversificar a base.',
+      documento: ['SAFE','SAFT'],
+      equity_esperado: 15,
+    },
   ],
   activeRoundId: null,
   detailRoundId: null,
@@ -252,6 +258,12 @@ function renderRoundDetail() {
     `<div class="ts">Tier ${b.t}: <b>${b.n}</b> fundos · <b>${fmt(b.cm)}</b> comitado</div>`
   ).join('');
 
+  const docs = Array.isArray(round.documento) ? round.documento : [];
+  $('#rd-documento').textContent = docs.length ? docs.join(' + ') : '—';
+  $('#rd-equity').textContent = (round.equity_esperado || round.equity_esperado === 0)
+    ? Number(round.equity_esperado).toLocaleString('pt-BR') + '%' : '—';
+  $('#rd-estrategia').textContent = round.estrategia || '—';
+
   renderKanban();
 }
 
@@ -414,6 +426,10 @@ function openRoundModal(id) {
     form.name.value = editing.name;
     form.target.value = editing.target;
     form.status.value = editing.status;
+    form.equity_esperado.value = editing.equity_esperado ?? '';
+    form.estrategia.value = editing.estrategia || '';
+    const docs = Array.isArray(editing.documento) ? editing.documento : [];
+    $$('#round-form input[name=documento]').forEach(c => c.checked = docs.includes(c.value));
   }
   $('#round-modal').classList.remove('hidden');
 }
@@ -421,11 +437,15 @@ function openRoundModal(id) {
 async function submitRound(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
+  const documento = $$('#round-form input[name=documento]:checked').map(c => c.value);
   await api.saveRound({
     id: fd.get('id') || null,
     name: fd.get('name').trim(),
     target: Number(fd.get('target')),
     status: fd.get('status'),
+    equity_esperado: fd.get('equity_esperado') === '' ? null : Number(fd.get('equity_esperado')),
+    documento,
+    estrategia: (fd.get('estrategia') || '').trim(),
   });
   closeModals();
   renderRounds(); renderDashboard();
