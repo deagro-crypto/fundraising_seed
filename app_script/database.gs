@@ -16,12 +16,15 @@ const Database = (function () {
       'focus_impacto', 'focus_tech', 'focus_blockchain', 'focus_crypto',
       'latam', 'location', 'work_format',
       'status', 'proposed_ticket', 'committed_ticket',
-      'thesis', 'notes', 'owner',
+      'thesis', 'notes_deagro', 'notes_advisor', 'owner',
+      'round_ids',
       'created_at', 'updated_at',
     ],
     Rounds: [
       'id', 'name', 'target', 'currency', 'status',
-      'opened_at', 'closed_at', 'notes',
+      'opened_at', 'closed_at',
+      'estrategia', 'documento', 'equity_esperado',
+      'notes',
       'created_at', 'updated_at',
     ],
     Notes: [
@@ -36,13 +39,16 @@ const Database = (function () {
   };
 
   const DEFAULT_ENUMS = [
-    ['status', 'todo',       'A contatar'],
-    ['status', 'contacted',  'Contato feito'],
-    ['status', 'waiting',    'Aguardando resposta'],
-    ['status', 'diligence',  'Em diligência'],
-    ['status', 'interest',   'Interesse'],
-    ['status', 'committed',  'Comitado'],
-    ['status', 'pass',       'Passou'],
+    ['status', 'todo',                 'A contatar'],
+    ['status', 'contacted',            'Contato feito'],
+    ['status', 'waiting',              'Aguardando resposta'],
+    ['status', 'interest',             'Interesse'],
+    ['status', 'discarded',            'Descartado'],
+    ['status', 'no_interest_company',  'Sem interesse da empresa'],
+    ['status', 'negotiation',          'Em negociação'],
+    ['status', 'committed',            'Comitado'],
+    ['status', 'closed',               'Fechado'],
+    ['status', 'stalled',              'Não evoluiu'],
     ['tier',   '1',          'Tier 1'],
     ['tier',   '2',          'Tier 2'],
     ['tier',   '3',          'Tier 3'],
@@ -50,6 +56,8 @@ const Database = (function () {
     ['focus',  'Tech',       'Tech'],
     ['focus',  'Blockchain', 'Blockchain'],
     ['focus',  'Crypto',     'Crypto'],
+    ['documento','SAFE',     'SAFE'],
+    ['documento','SAFT',     'SAFT'],
   ];
 
   /* ---------------- Sheet utilities ---------------- */
@@ -123,6 +131,7 @@ const Database = (function () {
 
   function toFundRow_(f) {
     const focus = Array.isArray(f.focus) ? f.focus : [];
+    const roundIds = Array.isArray(f.round_ids) ? f.round_ids : [];
     return {
       id: f.id,
       name: f.name || '',
@@ -139,8 +148,10 @@ const Database = (function () {
       proposed_ticket: Number(f.proposed_ticket) || 0,
       committed_ticket: Number(f.committed_ticket) || 0,
       thesis: f.thesis || '',
-      notes: f.notes || '',
+      notes_deagro: f.notes_deagro || '',
+      notes_advisor: f.notes_advisor || '',
       owner: f.owner || '',
+      round_ids: roundIds.join(';'),
       created_at: f.created_at || now_(),
       updated_at: now_(),
     };
@@ -165,8 +176,49 @@ const Database = (function () {
       proposed_ticket: Number(r.proposed_ticket) || 0,
       committed_ticket: Number(r.committed_ticket) || 0,
       thesis: r.thesis,
-      notes: r.notes,
+      notes_deagro: r.notes_deagro,
+      notes_advisor: r.notes_advisor,
       owner: r.owner,
+      round_ids: String(r.round_ids || '').split(';').filter(Boolean),
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    };
+  }
+
+  function toRoundRow_(r) {
+    const doc = Array.isArray(r.documento) ? r.documento : [];
+    return {
+      id: r.id,
+      name: r.name || '',
+      target: Number(r.target) || 0,
+      currency: r.currency || 'USD',
+      status: r.status || 'open',
+      opened_at: r.opened_at || new Date().toISOString().slice(0,10),
+      closed_at: r.closed_at || '',
+      estrategia: r.estrategia || '',
+      documento: doc.join(';'),
+      equity_esperado: (r.equity_esperado === null || r.equity_esperado === undefined || r.equity_esperado === '')
+        ? '' : Number(r.equity_esperado),
+      notes: r.notes || '',
+      created_at: r.created_at || now_(),
+      updated_at: now_(),
+    };
+  }
+
+  function fromRoundRow_(r) {
+    return {
+      id: r.id,
+      name: r.name,
+      target: Number(r.target) || 0,
+      currency: r.currency || 'USD',
+      status: r.status || 'open',
+      opened_at: r.opened_at,
+      closed_at: r.closed_at,
+      estrategia: r.estrategia || '',
+      documento: String(r.documento || '').split(';').filter(Boolean),
+      equity_esperado: r.equity_esperado === '' || r.equity_esperado === null || r.equity_esperado === undefined
+        ? null : Number(r.equity_esperado),
+      notes: r.notes,
       created_at: r.created_at,
       updated_at: r.updated_at,
     };
@@ -211,50 +263,25 @@ const Database = (function () {
 
   const Rounds = {
     list() {
-      return rowsToObjects_(sheet_('Rounds')).rows.map(r => ({
-        id: r.id, name: r.name,
-        target: Number(r.target) || 0,
-        currency: r.currency || 'USD',
-        status: r.status || 'open',
-        opened_at: r.opened_at, closed_at: r.closed_at,
-        notes: r.notes,
-        created_at: r.created_at, updated_at: r.updated_at,
-      }));
+      return rowsToObjects_(sheet_('Rounds')).rows.map(fromRoundRow_);
     },
     get(id) {
       const { obj } = findRowIndex_(sheet_('Rounds'), id);
-      return {
-        id: obj.id, name: obj.name,
-        target: Number(obj.target) || 0,
-        currency: obj.currency || 'USD',
-        status: obj.status || 'open',
-        opened_at: obj.opened_at, closed_at: obj.closed_at,
-        notes: obj.notes,
-      };
+      return fromRoundRow_(obj);
     },
     create(payload) {
       const sh = sheet_('Rounds');
-      const r = {
-        id: uid_(),
-        name: payload.name || '',
-        target: Number(payload.target) || 0,
-        currency: payload.currency || 'USD',
-        status: payload.status || 'open',
-        opened_at: payload.opened_at || new Date().toISOString().slice(0,10),
-        closed_at: payload.closed_at || '',
-        notes: payload.notes || '',
-        created_at: now_(),
-        updated_at: now_(),
-      };
+      const r = toRoundRow_({ ...payload, id: uid_(), created_at: now_() });
       writeObject_(sh, SCHEMA.Rounds, r);
-      return r;
+      return fromRoundRow_(r);
     },
     update(id, patch) {
       const sh = sheet_('Rounds');
       const { row, obj } = findRowIndex_(sh, id);
-      const merged = { ...obj, ...patch, id, updated_at: now_() };
+      const before = fromRoundRow_(obj);
+      const merged = toRoundRow_({ ...before, ...patch, id, created_at: obj.created_at });
       updateObject_(sh, row, SCHEMA.Rounds, merged);
-      return merged;
+      return fromRoundRow_(merged);
     },
   };
 
