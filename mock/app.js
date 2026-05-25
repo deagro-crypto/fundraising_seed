@@ -61,7 +61,8 @@ const api = {
   deleteFund:   (id) => call('deleteFund', { id }),
   listRounds:   ()   => call('listRounds'),
   saveRound:    (r)  => r.id ? call('updateRound', r) : call('createRound', r),
-  addFundsToRound: (round_id, fund_ids) => call('addFundsToRound', { round_id, fund_ids }),
+  addFundsToRound:      (round_id, fund_ids) => call('addFundsToRound',      { round_id, fund_ids }),
+  removeFundsFromRound: (round_id, fund_ids) => call('removeFundsFromRound', { round_id, fund_ids }),
 };
 
 async function reloadAll() {
@@ -483,9 +484,11 @@ async function submitRound(e) {
   } catch (e) { alert('Erro ao salvar rodada: ' + e.message); }
 }
 
-/* ===================== ADD FUNDS TO ROUND ===================== */
+/* ===================== MANAGE FUNDS IN ROUND ===================== */
 function openAddFundsModal() {
-  state.addSelection = new Set();
+  const roundId = state.detailRoundId || state.activeRoundId;
+  state.addInitial = new Set(state.funds.filter(f => inRound(f, roundId)).map(f => f.id));
+  state.addSelection = new Set(state.addInitial);
   $('#add-q').value = '';
   $('#add-tier').value = '';
   renderAddList();
@@ -495,14 +498,13 @@ function openAddFundsModal() {
 function renderAddList() {
   const q = $('#add-q').value.trim().toLowerCase();
   const tier = $('#add-tier').value;
-  const roundId = state.detailRoundId || state.activeRoundId;
-  const candidates = state.funds.filter(f => !inRound(f, roundId));
-  const filtered = candidates.filter(f => {
+  const filtered = state.funds.filter(f => {
     if (tier && f.tier !== Number(tier)) return false;
     if (q && !f.name.toLowerCase().includes(q)) return false;
     return true;
   });
-  $('#add-count').textContent = `${filtered.length} disponíve${filtered.length === 1 ? 'l' : 'is'}`;
+  updateAddCount(filtered.length);
+
   $('#add-list').innerHTML = filtered.length ? filtered.map(f => `
     <label class="add-row">
       <input type="checkbox" class="add-row__cb" data-id="${f.id}" ${state.addSelection.has(f.id) ? 'checked' : ''} />
@@ -511,32 +513,49 @@ function renderAddList() {
         <span class="chip tier-${f.tier}">T${f.tier}</span>
         <span class="add-row__thesis">${escapeHtml(f.thesis || '')}</span>
       </div>
-    </label>`).join('') : '<div class="empty">Todos os fundos já estão na rodada</div>';
+    </label>`).join('') : '<div class="empty">Nenhum fundo bate com os filtros</div>';
   $$('#add-list input[type=checkbox]').forEach(c => c.addEventListener('change', e => {
     const id = e.target.dataset.id;
     if (e.target.checked) state.addSelection.add(id); else state.addSelection.delete(id);
     updateAddConfirm();
+    updateAddCount(filtered.length);
   }));
   updateAddConfirm();
 }
 
+function updateAddCount(visible) {
+  const total = state.funds.length;
+  const marked = state.addSelection.size;
+  $('#add-count').textContent = `${marked} de ${total} marcados · ${visible} visíveis`;
+}
+
 function updateAddConfirm() {
-  const n = state.addSelection.size;
+  const initial   = state.addInitial   || new Set();
+  const selection = state.addSelection || new Set();
+  const toAdd    = [...selection].filter(id => !initial.has(id));
+  const toRemove = [...initial].filter(id => !selection.has(id));
+  const parts = [];
+  if (toAdd.length)    parts.push(`+${toAdd.length}`);
+  if (toRemove.length) parts.push(`−${toRemove.length}`);
   const btn = $('#add-confirm');
-  btn.textContent = `Adicionar (${n})`;
-  btn.disabled = n === 0;
+  btn.textContent = parts.length ? `Salvar alterações (${parts.join(' ')})` : 'Salvar alterações';
+  btn.disabled = parts.length === 0;
 }
 
 async function confirmAddFunds() {
-  const roundId = state.detailRoundId || state.activeRoundId;
-  const fund_ids = [...state.addSelection];
-  if (!fund_ids.length) return;
+  const roundId   = state.detailRoundId || state.activeRoundId;
+  const initial   = state.addInitial   || new Set();
+  const selection = state.addSelection || new Set();
+  const toAdd    = [...selection].filter(id => !initial.has(id));
+  const toRemove = [...initial].filter(id => !selection.has(id));
+  if (!toAdd.length && !toRemove.length) return;
   try {
-    await api.addFundsToRound(roundId, fund_ids);
+    if (toAdd.length)    await api.addFundsToRound(roundId, toAdd);
+    if (toRemove.length) await api.removeFundsFromRound(roundId, toRemove);
     await reloadAll();
     closeModals();
     rerenderActiveView();
-  } catch (e) { alert('Erro ao adicionar fundos: ' + e.message); }
+  } catch (e) { alert('Erro ao atualizar fundos da rodada: ' + e.message); }
 }
 
 /* ===================== WIRE UP ===================== */
