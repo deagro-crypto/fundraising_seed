@@ -111,12 +111,57 @@ function bulkRoundMembership_(roundId, fundIds, mode, user) {
 
 /* ------------------ Setup helpers ------------------ */
 
-/** Roda manualmente uma vez para configurar a planilha alvo. */
+/**
+ * Roda uma única vez. Cria a planilha do zero no Drive,
+ * salva o ID em Script Properties e inicializa as abas/cabeçalhos.
+ * Retorna logs com o ID e a URL — confira no painel de execução.
+ */
+function setupDatabase() {
+  const props = PropertiesService.getScriptProperties();
+  let id = props.getProperty('SPREADSHEET_ID');
+  let ss;
+
+  if (id) {
+    try {
+      ss = SpreadsheetApp.openById(id);
+      Logger.log('Já existe SPREADSHEET_ID configurado: ' + id);
+    } catch (e) {
+      Logger.log('SPREADSHEET_ID inválido, criando nova planilha.');
+      id = null;
+    }
+  }
+
+  if (!id) {
+    ss = SpreadsheetApp.create('DeAgro Fundraising DB');
+    id = ss.getId();
+    props.setProperty('SPREADSHEET_ID', id);
+    // Remove a aba "Sheet1"/"Página1" criada por padrão depois que initDatabase tiver criado as nossas
+  }
+
+  const initResult = Database.init();
+
+  // Limpa a aba default vazia, se ainda existir
+  const defaults = ['Sheet1', 'Página1', 'Sheet 1'];
+  defaults.forEach(name => {
+    const sh = ss.getSheetByName(name);
+    if (sh && ss.getSheets().length > 1) ss.deleteSheet(sh);
+  });
+
+  const url = ss.getUrl();
+  Logger.log('✓ Planilha pronta');
+  Logger.log('   ID:  ' + id);
+  Logger.log('   URL: ' + url);
+  Logger.log('   Abas criadas: ' + initResult.sheets.join(', '));
+
+  return { ok: true, spreadsheet_id: id, url, sheets: initResult.sheets };
+}
+
+/** Configura o ID manualmente (caso queira apontar para uma planilha existente). */
 function setSpreadsheetId(id) {
   PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id);
 }
 
-/** Roda manualmente para criar as abas/cabeçalhos na planilha vinculada. */
+/** Roda manualmente para (re)criar as abas/cabeçalhos numa planilha já configurada. */
 function initDatabase() {
-  Database.init();
+  return Database.init();
 }
