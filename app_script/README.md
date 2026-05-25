@@ -9,20 +9,23 @@ Backend do CRM rodando como **Google Apps Script Web App** com Google Sheets com
 
 ## Setup (uma vez)
 
-1. **Criar planilha** no Drive da DeAgro. Copie o ID (parte da URL entre `/d/` e `/edit`).
-2. **Criar projeto Apps Script** em `script.google.com` → New project. Renomeie o `Code.gs` padrão e adicione um segundo arquivo:
-   - Cole o conteúdo de `app_script/code.gs` em `Code.gs`
-   - Crie `Database.gs` (File → New → Script) e cole `app_script/database.gs`
-3. **Project Settings → Script Properties → Add property**:
-   - `SPREADSHEET_ID` = ID da planilha (passo 1)
-   - `ADVISOR_EMAILS` (opcional) = emails do advisor separados por vírgula. Quem escrever notas com email nessa lista é marcado como `advisor`; senão, `deagro`.
-4. **Authorize + inicializar**: no editor, selecione a função `initDatabase` no menu suspenso e clique em **Run**. O Google vai pedir autorização (Sheets + script execution). Confirme. Isso cria as abas `Funds`, `Rounds`, `Notes`, `StatusLog`, `Enums` com cabeçalhos e popula `Enums` com os valores padrão.
-5. **Deploy**: Deploy → New deployment → "Web app"
+1. **Criar projeto Apps Script** em `script.google.com` → New project.
+   - Renomeie o `Code.gs` padrão e cole o conteúdo de `app_script/code.gs`.
+   - **File → New → Script** → nomeie `Database.gs` e cole `app_script/database.gs`.
+2. **(Opcional) Script Properties**: ⚙ Project Settings → Script Properties:
+   - `ADVISOR_EMAILS` = emails do advisor separados por vírgula. Quem escrever notas com email nessa lista é marcado como `advisor`; senão, `deagro`.
+   - *(Não precisa criar `SPREADSHEET_ID` — o `setupDatabase()` faz isso pra você.)*
+3. **Rodar `setupDatabase`**: no editor, selecione a função `setupDatabase` no seletor de funções e clique em **Run**. Autorize quando o Google pedir (precisa de Sheets + Drive).
+   - O script vai **criar a planilha** "DeAgro Fundraising DB" no seu Drive, salvar o ID em Script Properties automaticamente, criar as 5 abas (`Funds`, `Rounds`, `Notes`, `StatusLog`, `Enums`) com cabeçalhos verdes e popular o `Enums` com os valores padrão.
+   - Abra **View → Logs** (`Ctrl+Enter`) — o log mostra o ID e a URL da planilha criada.
+4. **Deploy**: Deploy → New deployment → "Web app"
    - *Execute as*: Me (sua conta DeAgro)
    - *Who has access*: "Anyone with Google Account" (ou restrinja ao domínio Workspace da DeAgro)
    - Deploy → copie a **URL `/exec`**
-6. **Smoke test**: abra `<webapp-url>/exec?action=ping` no navegador. Deve retornar `{"ok":true,"data":{"ok":true,"time":"..."}}`.
-7. **Me passe a URL** para eu conectar o frontend.
+5. **Smoke test**: abra `<webapp-url>/exec?action=ping`. Deve retornar `{"ok":true,"data":{"ok":true,"time":"..."}}`.
+6. **Me passe a URL** para eu conectar o frontend.
+
+> Se algum dia quiser recomeçar do zero: delete a planilha no Drive, apague a Script Property `SPREADSHEET_ID` e rode `setupDatabase()` de novo.
 
 ## Protocolo
 
