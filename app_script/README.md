@@ -6,24 +6,27 @@ Backend do CRM rodando como **Google Apps Script Web App** com Google Sheets com
 
 - `code.gs` — Web App (`doGet`/`doPost`), router de actions, handlers, agregados (`roundProgress`) e helpers de setup.
 - `database.gs` — Camada de acesso aos dados. Declara o schema das abas e expõe `Database.Funds`, `Database.Rounds`, `Database.Notes`, `Database.StatusLog`.
+- `seed.gs` — Função `seedFunds()` que importa os 40 fundos da base DeAgro e cria a rodada "Seed 2026" com todos linkados. Idempotente.
 
 ## Setup (uma vez)
 
-1. **Criar projeto Apps Script** em `script.google.com` → New project.
-   - Renomeie o `Code.gs` padrão e cole o conteúdo de `app_script/code.gs`.
-   - **File → New → Script** → nomeie `Database.gs` e cole `app_script/database.gs`.
+1. **Criar projeto Apps Script** em `script.google.com` → New project. Cole 3 arquivos:
+   - Renomeie o `Code.gs` padrão e cole `app_script/code.gs`.
+   - **File → New → Script** → `Database.gs` → cole `app_script/database.gs`.
+   - **File → New → Script** → `Seed.gs` → cole `app_script/seed.gs`.
 2. **(Opcional) Script Properties**: ⚙ Project Settings → Script Properties:
    - `ADVISOR_EMAILS` = emails do advisor separados por vírgula. Quem escrever notas com email nessa lista é marcado como `advisor`; senão, `deagro`.
    - *(Não precisa criar `SPREADSHEET_ID` — o `setupDatabase()` faz isso pra você.)*
 3. **Rodar `setupDatabase`**: no editor, selecione a função `setupDatabase` no seletor de funções e clique em **Run**. Autorize quando o Google pedir (precisa de Sheets + Drive).
    - O script vai **criar a planilha** "DeAgro Fundraising DB" no seu Drive, salvar o ID em Script Properties automaticamente, criar as 5 abas (`Funds`, `Rounds`, `Notes`, `StatusLog`, `Enums`) com cabeçalhos verdes e popular o `Enums` com os valores padrão.
    - Abra **View → Logs** (`Ctrl+Enter`) — o log mostra o ID e a URL da planilha criada.
-4. **Deploy**: Deploy → New deployment → "Web app"
+4. **Rodar `seedFunds`** (opcional, mas recomendado): seletor de funções → `seedFunds` → **Run**. Importa os 40 fundos da base DeAgro e cria a rodada "Seed 2026" com todos linkados. Pode rodar de novo sem medo — não duplica.
+5. **Deploy**: Deploy → New deployment → "Web app"
    - *Execute as*: Me (sua conta DeAgro)
    - *Who has access*: "Anyone with Google Account" (ou restrinja ao domínio Workspace da DeAgro)
    - Deploy → copie a **URL `/exec`**
-5. **Smoke test**: abra `<webapp-url>/exec?action=ping`. Deve retornar `{"ok":true,"data":{"ok":true,"time":"..."}}`.
-6. **Me passe a URL** para eu conectar o frontend.
+6. **Smoke test**: abra `<webapp-url>/exec?action=ping`. Deve retornar `{"ok":true,"data":{"ok":true,"time":"..."}}`.
+7. **Me passe a URL** para eu conectar o frontend.
 
 > Se algum dia quiser recomeçar do zero: delete a planilha no Drive, apague a Script Property `SPREADSHEET_ID` e rode `setupDatabase()` de novo.
 
