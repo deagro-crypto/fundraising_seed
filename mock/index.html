@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>DeAgro · Fundraising CRM (mock)</title>
+<title>DeAgro · Fundraising CRM</title>
 <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -13,7 +13,7 @@
         <span class="logo">DeAgro · Fundraising</span>
       </div>
       <nav class="nav-links">
-        <a href="#dashboard" class="nav-link active" data-view="dashboard">Rodada</a>
+        <a href="#dashboard" class="nav-link active" data-view="dashboard">Dashboard</a>
         <a href="#funds" class="nav-link" data-view="funds">Fundos</a>
         <a href="#rounds" class="nav-link" data-view="rounds">Rodadas</a>
       </nav>
@@ -26,37 +26,56 @@
     <section id="view-dashboard" class="view">
       <div class="view-header">
         <div>
-          <h2 id="round-name">Seed 2026</h2>
-          <p class="muted">Status atual da rodada ativa</p>
+          <h2 id="dash-round-name">Rodada ativa</h2>
+          <p class="muted" id="dash-round-meta">—</p>
         </div>
-        <button class="btn-secondary" id="edit-round-btn">Editar rodada</button>
+        <button class="btn-ghost" id="dash-open-round">Abrir rodada →</button>
       </div>
 
-      <div class="round-progress card">
-        <div class="round-progress__row">
-          <div>
-            <div class="muted">Target</div>
-            <div class="big" id="round-target">US$ 0</div>
-          </div>
-          <div>
-            <div class="muted">Comitado</div>
-            <div class="big" id="round-committed">US$ 0</div>
-          </div>
-          <div>
-            <div class="muted">Em diligência</div>
-            <div class="big" id="round-pipeline">US$ 0</div>
-          </div>
-          <div>
-            <div class="muted">% rodada</div>
-            <div class="big" id="round-pct">0%</div>
-          </div>
+      <!-- KPIs principais -->
+      <div class="kpi-grid">
+        <div class="card kpi">
+          <div class="kpi__label">Target</div>
+          <div class="kpi__value" id="kpi-target">US$ 0</div>
         </div>
-        <div class="bar"><div class="bar__fill" id="round-bar"></div></div>
-        <div class="tier-split" id="tier-split"></div>
+        <div class="card kpi kpi--accent">
+          <div class="kpi__label">Capturado (comitado)</div>
+          <div class="kpi__value" id="kpi-committed">US$ 0</div>
+          <div class="bar bar--sm"><div class="bar__fill" id="kpi-bar"></div></div>
+          <div class="kpi__sub muted" id="kpi-pct">0% do target</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi__label">Em negociação</div>
+          <div class="kpi__value" id="kpi-pipeline">US$ 0</div>
+          <div class="kpi__sub muted" id="kpi-pipeline-n">0 fundos</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi__label">Universo de fundos</div>
+          <div class="kpi__value" id="kpi-universe">0</div>
+          <div class="kpi__sub muted" id="kpi-active">0 ativos no funil</div>
+        </div>
       </div>
 
-      <h3 style="margin-top:2rem">Pipeline ativo</h3>
-      <div class="pipeline" id="pipeline"></div>
+      <!-- Funil + Pizza -->
+      <div class="dash-row">
+        <div class="card">
+          <h3>Funil da rodada</h3>
+          <div class="funnel" id="funnel"></div>
+        </div>
+        <div class="card">
+          <h3>Fundos por tier</h3>
+          <div class="pie-wrap">
+            <svg viewBox="0 0 200 200" id="pie-tier" class="pie"></svg>
+            <ul class="legend" id="pie-tier-legend"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribuição por foco/tese -->
+      <div class="card">
+        <h3>Distribuição por foco de tese</h3>
+        <div class="bars" id="focus-bars"></div>
+      </div>
     </section>
 
     <!-- =================== FUNDS =================== -->
@@ -64,7 +83,7 @@
       <div class="view-header">
         <div>
           <h2>Fundos</h2>
-          <p class="muted">CRUD de fundos potenciais — filtre por tier, foco, geografia ou status</p>
+          <p class="muted">Clique numa linha para abrir o card · filtre por tier, foco, geografia ou status</p>
         </div>
         <button class="btn-primary" id="new-fund-btn">+ Novo fundo</button>
       </div>
@@ -96,7 +115,7 @@
         <button class="btn-ghost" id="clear-filters">Limpar</button>
       </div>
 
-      <div class="table-wrap card">
+      <div class="table-wrap card card--bordered">
         <table class="funds-table">
           <thead>
             <tr>
@@ -107,8 +126,7 @@
               <th>Status</th>
               <th class="right">Proposto</th>
               <th class="right">Comitado</th>
-              <th>Tese / Obs</th>
-              <th></th>
+              <th>Tese</th>
             </tr>
           </thead>
           <tbody id="funds-tbody"></tbody>
@@ -117,23 +135,50 @@
       </div>
     </section>
 
-    <!-- =================== ROUNDS =================== -->
+    <!-- =================== ROUNDS LIST =================== -->
     <section id="view-rounds" class="view hidden">
       <div class="view-header">
         <div>
           <h2>Rodadas</h2>
-          <p class="muted">CRUD de rodadas de captação</p>
+          <p class="muted">CRUD de rodadas · clique para abrir o detalhe</p>
         </div>
         <button class="btn-primary" id="new-round-btn">+ Nova rodada</button>
       </div>
-      <div class="table-wrap card">
+      <div class="table-wrap card card--bordered">
         <table class="funds-table">
           <thead>
-            <tr><th>Nome</th><th>Target</th><th>Comitado</th><th>Status</th><th>Aberta em</th><th></th></tr>
+            <tr><th>Nome</th><th class="right">Target</th><th class="right">Comitado</th><th>Status</th><th>Aberta em</th></tr>
           </thead>
           <tbody id="rounds-tbody"></tbody>
         </table>
       </div>
+    </section>
+
+    <!-- =================== ROUND DETAIL =================== -->
+    <section id="view-round-detail" class="view hidden">
+      <div class="view-header">
+        <div>
+          <button class="btn-ghost btn--inline" id="back-to-rounds">← Rodadas</button>
+          <h2 id="rd-name" style="margin-top:.25rem">Rodada</h2>
+          <p class="muted" id="rd-meta">—</p>
+        </div>
+        <button class="btn-secondary" id="edit-round-btn">Editar rodada</button>
+      </div>
+
+      <div class="round-progress card card--bordered">
+        <div class="round-progress__row">
+          <div><div class="muted">Target</div><div class="big" id="rd-target">US$ 0</div></div>
+          <div><div class="muted">Comitado</div><div class="big" id="rd-committed">US$ 0</div></div>
+          <div><div class="muted">Em negociação</div><div class="big" id="rd-pipeline">US$ 0</div></div>
+          <div><div class="muted">% rodada</div><div class="big" id="rd-pct">0%</div></div>
+        </div>
+        <div class="bar"><div class="bar__fill" id="rd-bar"></div></div>
+        <div class="tier-split" id="rd-tier-split"></div>
+      </div>
+
+      <h3 style="margin-top:2rem">Pipeline</h3>
+      <p class="muted" style="margin-top:-.25rem;margin-bottom:1rem">Cards coloridos por tier · arraste mentalmente pelas colunas conforme o status evolui</p>
+      <div class="kanban" id="kanban"></div>
     </section>
   </main>
 
@@ -142,7 +187,7 @@
     <div class="modal__backdrop" data-close></div>
     <div class="modal__panel">
       <div class="modal__header">
-        <h3 id="fund-modal-title">Novo fundo</h3>
+        <h3 id="fund-modal-title">Fundo</h3>
         <button class="icon-btn" data-close>×</button>
       </div>
       <form id="fund-form" class="modal__body">
@@ -202,9 +247,10 @@
         </label>
 
         <div class="modal__footer">
-          <button type="button" class="btn-ghost" data-close>Cancelar</button>
+          <button type="button" class="btn-ghost" data-close>Fechar</button>
           <button type="button" class="btn-danger hidden" id="delete-fund-btn">Excluir</button>
-          <button type="submit" class="btn-primary">Salvar</button>
+          <button type="button" class="btn-secondary" id="edit-mode-btn">Editar</button>
+          <button type="submit" class="btn-primary hidden" id="save-fund-btn">Salvar</button>
         </div>
       </form>
     </div>
