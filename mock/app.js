@@ -22,102 +22,54 @@ const FOCUS_COLORS = {
   Impacto: '#1f4d2a', Tech: '#005577', Blockchain: '#4a2e8c', Crypto: '#8a4b00',
 };
 
-/* ---------- Seed data (Excel Base) ---------- */
-const seedFunds = [
-  ['Accion Venture Lab','https://accion.org/venturelab',1,['Impacto','Tech'],true,'impacto financeiro inclusivo + fintech / web3'],
-  ['Quona Capital','https://quona.com',1,['Impacto','Tech','Blockchain'],true,'fintech inclusiva (infra próxima de blockchain)'],
-  ['IGNIA','https://ignia.com.mx',1,['Impacto','Tech'],true,'impacto + tech, forte em LATAM'],
-  ['Mercy Corps Ventures','https://mercycorps.org/ventures',1,['Impacto','Tech','Blockchain'],true,'investe em blockchain para inclusão, agro com tokenização de grãos, foco em clima'],
-  ['Bamboo Capital Partners','https://bamboocp.com',1,['Impacto'],true,'energia e inclusão financeira — forte em agro'],
-  ['Vox Capital','https://voxcapital.com.br',1,['Impacto','Tech'],true,'um dos principais fundos de impacto do Brasil'],
-  ['Positive Ventures','https://positive.vc',1,['Impacto','Tech'],true,'impacto + tech emergente — preferência por rodadas seed'],
-  ['EcoEnterprises Fund','https://ecoenterprisesfund.com',1,['Impacto'],true,'clima e bioeconomia LATAM'],
-  ['Regen Network','https://regen.network',1,['Impacto','Tech','Blockchain'],false,'blockchain + agro'],
-  ['Toucan Protocol','https://toucan.earth',1,['Impacto','Tech','Blockchain'],false,'tokenização de créditos de carbono'],
-  ['Celo Foundation','https://celo.org',1,['Impacto','Tech'],true,'forte em impacto + LATAM + inclusão financeira'],
-  ['Multicoin Capital','https://multicoin.capital',1,['Impacto','Tech','Blockchain','Crypto'],false,'state-free money e open finance'],
-  ['Potencia Ventures','',2,['Impacto','Tech'],true,'impacto social + tech'],
-  ['Village Capital','https://vilcap.com',2,['Impacto','Tech'],true,'impacto + inovação — com blockchain'],
-  ['LGT Venture Philanthropy','https://lgtvp.com',2,['Impacto'],true,'forte em clima e food systems'],
-  ['MOV Investimentos','https://movinvest.com.br',2,['Impacto','Tech'],true,'ESG e impacto'],
-  ['Kaeté Investimentos','',2,['Impacto'],true,'negócios sustentáveis'],
-  ['Angel Ventures','https://angelventures.vc',2,['Tech'],true,'early-stage LATAM'],
-  ['Bossanova Investimentos','https://bossanovainvest.com',2,['Tech'],true,'early-stage LATAM'],
-  ['Infinite Capital','',2,['Tech','Blockchain'],true,'blockchain + deeptech com atuação LATAM'],
-  ['Acumen Fund','https://acumen.org',2,['Impacto','Tech'],true,'agricultura e energia com inclusão'],
-  ['Root Capital','https://rootcapital.org',2,['Impacto','Tech'],true,'financiamento agrícola — explorando digitalização'],
-  ['Delphi Ventures','https://delphidigital.io',2,['Tech','Blockchain','Crypto'],false,'projetos que avançam um futuro descentralizado'],
-  ['A16Z','https://a16z.com',2,['Tech','Blockchain','Crypto'],false,'crypto e web3 — todas as fases'],
-  ['Archetype','https://archetype.fund',2,['Impacto','Tech','Blockchain','Crypto'],false,'early-stage crypto'],
-  ['Placeholder VC','https://placeholder.vc',2,['Tech','Blockchain','Crypto'],false,'open-source, decentralized networks'],
-  ['Paradigm','https://paradigm.xyz',2,['Tech','Blockchain'],false,'research-driven, open blockchain tech'],
-  ['Omidyar Network','https://omidyar.com',3,['Impacto','Tech','Crypto'],true,'impacto sistêmico + govtech + crypto'],
-  ['Elevar Equity','https://elevarequity.com',3,['Impacto','Tech'],true,'inclusão econômica'],
-  ['Rayo Capital','',3,['Tech'],true,'foco em web3 LATAM'],
-  ['Pantera Capital','https://panteracapital.com',3,['Tech','Crypto'],false,'um dos maiores fundos cripto do mundo'],
-  ['Blockchain Capital','https://blockchain.capital',3,['Tech','Blockchain','Crypto'],false,'pioneiro em blockchain — focado em crypto'],
-  ['Digital Currency Group','https://dcg.co',3,['Tech'],true,'grande investidor global com atuação LATAM'],
-  ['Coinbase Ventures','https://coinbase.com/ventures',3,['Tech','Crypto'],false,'startups Latam — foco em crypto'],
-  ['Animoca Brands','https://animocabrands.com',3,['Tech'],false,'gaming + web3 global'],
-  ['1kx','https://1kx.network',3,['Tech','Blockchain','Crypto'],false,'token networks com community ownership'],
-  ['Framework Ventures','https://framework.ventures',3,['Tech','Blockchain'],false,'DeFi, gaming, AI e blockchain infra'],
-  ['CoinFund','https://coinfund.io',3,['Tech','Blockchain','Crypto'],false,'on-chain financial products'],
-  ['Electric Capital','https://electriccapital.com',3,['Tech','Crypto'],false,'crypto networks'],
-  ['Variant Fund','https://variant.fund',3,['Tech','Blockchain','Crypto'],false,'user-owned web'],
-];
+/* ---------- API config ---------- */
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbwENPsA2SFBqXTXWj8OUEIMR7s9D8jlJE03WsXjMzGBU_7ZzFBns8A2F1-5u-teCVQG/exec';
+const API_URL = (new URLSearchParams(location.search).get('api')) ||
+                localStorage.getItem('deagroApiUrl') ||
+                DEFAULT_API_URL;
 
-const uid = () => Math.random().toString(36).slice(2, 10);
-const seedStatusCycle = ['todo','todo','contacted','waiting','negotiation','interest','discarded','stalled'];
-const SEED_ROUND_ID = uid();
+async function call(action, payload = {}) {
+  // text/plain evita preflight CORS (Apps Script aceita JSON cru no body)
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, payload }),
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'erro desconhecido');
+  return json.data;
+}
 
 let state = {
-  funds: seedFunds.map((r, i) => ({
-    id: uid(),
-    name: r[0], website: r[1], tier: r[2],
-    focus: r[3], latam: r[4], thesis: r[5],
-    notes_deagro: '', notes_advisor: '',
-    location: '', work_format: '',
-    status: seedStatusCycle[i % seedStatusCycle.length],
-    proposed_ticket: [250000, 500000, 1000000, 150000][i % 4],
-    committed_ticket: (i % 9 === 0) ? 250000 : 0,
-    round_ids: i < 32 ? [SEED_ROUND_ID] : [],
-  })),
-  rounds: [
-    {
-      id: SEED_ROUND_ID, name: 'Seed 2026', target: 4000000, status: 'open',
-      opened_at: '2026-01-15',
-      estrategia: 'Captar com fundos de impacto + tech LATAM como âncoras, depois abrir cheques menores com fundos cripto globais para diversificar a base.',
-      documento: ['SAFE','SAFT'],
-      equity_esperado: 15,
-    },
-  ],
-  activeRoundId: SEED_ROUND_ID,
+  funds: [],
+  rounds: [],
+  activeRoundId: null,
   detailRoundId: null,
   filters: { tier: 'all', q: '', focus: '', latam: '', status: '' },
   sort: { key: null, dir: 'asc' },
   page: 1,
   pageSize: 20,
   addSelection: new Set(),
+  loading: false,
 };
 
-/* ---------- "API" mock ---------- */
+/* ---------- API client ---------- */
 const api = {
-  listFunds: () => Promise.resolve(state.funds),
-  saveFund: (f) => {
-    if (f.id) {
-      const i = state.funds.findIndex(x => x.id === f.id);
-      state.funds[i] = { ...state.funds[i], ...f };
-    } else { state.funds.push({ ...f, id: uid(), round_ids: f.round_ids || [] }); }
-    return Promise.resolve();
-  },
-  deleteFund: (id) => { state.funds = state.funds.filter(f => f.id !== id); return Promise.resolve(); },
-  listRounds: () => Promise.resolve(state.rounds),
-  saveRound: (r) => {
-    if (r.id) { const i = state.rounds.findIndex(x => x.id === r.id); state.rounds[i] = { ...state.rounds[i], ...r }; }
-    else { state.rounds.push({ ...r, id: uid(), opened_at: new Date().toISOString().slice(0,10) }); }
-    return Promise.resolve();
-  },
+  listFunds:    ()   => call('listFunds'),
+  saveFund:     (f)  => f.id ? call('updateFund', f) : call('createFund', f),
+  deleteFund:   (id) => call('deleteFund', { id }),
+  listRounds:   ()   => call('listRounds'),
+  saveRound:    (r)  => r.id ? call('updateRound', r) : call('createRound', r),
+  addFundsToRound: (round_id, fund_ids) => call('addFundsToRound', { round_id, fund_ids }),
 };
+
+async function reloadAll() {
+  const [funds, rounds] = await Promise.all([api.listFunds(), api.listRounds()]);
+  state.funds = funds || [];
+  state.rounds = rounds || [];
+  if (!state.activeRoundId && state.rounds[0]) state.activeRoundId = state.rounds[0].id;
+}
 
 /* ---------- Helpers ---------- */
 const fmt = (n) => n ? 'US$ ' + Number(n).toLocaleString('en-US') : 'US$ 0';
@@ -473,20 +425,24 @@ async function submitFund(e) {
     focus,
     latam: form.latam.checked,
   };
-  await api.saveFund(payload);
-  closeModals();
-  renderFunds(); renderDashboard();
-  if (!$('#view-round-detail').classList.contains('hidden')) renderRoundDetail();
+  try {
+    await api.saveFund(payload);
+    await reloadAll();
+    closeModals();
+    rerenderActiveView();
+  } catch (e) { alert('Erro ao salvar: ' + e.message); }
 }
 
 async function deleteFund() {
   const id = $('#fund-form').id.value;
   if (!id) return;
   if (!confirm('Excluir este fundo?')) return;
-  await api.deleteFund(id);
-  closeModals();
-  renderFunds(); renderDashboard();
-  if (!$('#view-round-detail').classList.contains('hidden')) renderRoundDetail();
+  try {
+    await api.deleteFund(id);
+    await reloadAll();
+    closeModals();
+    rerenderActiveView();
+  } catch (e) { alert('Erro ao excluir: ' + e.message); }
 }
 
 /* ===================== ROUND MODAL ===================== */
@@ -511,18 +467,20 @@ async function submitRound(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const documento = $$('#round-form input[name=documento]:checked').map(c => c.value);
-  await api.saveRound({
-    id: fd.get('id') || null,
-    name: fd.get('name').trim(),
-    target: Number(fd.get('target')),
-    status: fd.get('status'),
-    equity_esperado: fd.get('equity_esperado') === '' ? null : Number(fd.get('equity_esperado')),
-    documento,
-    estrategia: (fd.get('estrategia') || '').trim(),
-  });
-  closeModals();
-  renderRounds(); renderDashboard();
-  if (!$('#view-round-detail').classList.contains('hidden')) renderRoundDetail();
+  try {
+    await api.saveRound({
+      id: fd.get('id') || null,
+      name: fd.get('name').trim(),
+      target: Number(fd.get('target')),
+      status: fd.get('status'),
+      equity_esperado: fd.get('equity_esperado') === '' ? null : Number(fd.get('equity_esperado')),
+      documento,
+      estrategia: (fd.get('estrategia') || '').trim(),
+    });
+    await reloadAll();
+    closeModals();
+    rerenderActiveView();
+  } catch (e) { alert('Erro ao salvar rodada: ' + e.message); }
 }
 
 /* ===================== ADD FUNDS TO ROUND ===================== */
@@ -569,17 +527,16 @@ function updateAddConfirm() {
   btn.disabled = n === 0;
 }
 
-function confirmAddFunds() {
+async function confirmAddFunds() {
   const roundId = state.detailRoundId || state.activeRoundId;
-  state.funds.forEach(f => {
-    if (state.addSelection.has(f.id) && !inRound(f, roundId)) {
-      f.round_ids = [...(f.round_ids || []), roundId];
-    }
-  });
-  closeModals();
-  renderRoundDetail();
-  renderDashboard();
-  renderRounds();
+  const fund_ids = [...state.addSelection];
+  if (!fund_ids.length) return;
+  try {
+    await api.addFundsToRound(roundId, fund_ids);
+    await reloadAll();
+    closeModals();
+    rerenderActiveView();
+  } catch (e) { alert('Erro ao adicionar fundos: ' + e.message); }
 }
 
 /* ===================== WIRE UP ===================== */
@@ -644,7 +601,43 @@ function init() {
   $$('[data-close]').forEach(el => el.addEventListener('click', closeModals));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
 
-  switchView('dashboard');
+  bootstrap();
+}
+
+function rerenderActiveView() {
+  if (!$('#view-dashboard').classList.contains('hidden'))      renderDashboard();
+  else if (!$('#view-funds').classList.contains('hidden'))     renderFunds();
+  else if (!$('#view-rounds').classList.contains('hidden'))    renderRounds();
+  else if (!$('#view-round-detail').classList.contains('hidden')) renderRoundDetail();
+}
+
+async function bootstrap() {
+  showLoading(true);
+  try {
+    await reloadAll();
+    showLoading(false);
+    switchView('dashboard');
+  } catch (e) {
+    showLoading(false);
+    document.querySelector('.app').insertAdjacentHTML('afterbegin',
+      `<div class="card" style="border-color:#f3c4cb;background:#fdecef;color:#842029;margin-bottom:1rem">
+        <b>Falha ao carregar do backend.</b><br>
+        <code style="font-size:.78rem">${escapeHtml(e.message)}</code><br><br>
+        Verifique se a URL do Web App está correta (atual: <code>${escapeHtml(API_URL.slice(0, 80))}…</code>).
+        Pode sobrescrever via <code>?api=&lt;url&gt;</code> ou no DevTools: <code>localStorage.setItem('deagroApiUrl','&lt;url&gt;')</code> e recarregar.
+      </div>`);
+  }
+}
+
+function showLoading(on) {
+  state.loading = on;
+  let el = document.getElementById('app-loading');
+  if (on && !el) {
+    document.body.insertAdjacentHTML('beforeend',
+      `<div id="app-loading" style="position:fixed;top:80px;right:20px;padding:.5rem 1rem;background:#fff;border:1px solid var(--primary-light);border-radius:6px;box-shadow:var(--shadow-md);z-index:3000;font-size:.85rem;color:var(--primary-dark)">⟳ Carregando…</div>`);
+  } else if (!on && el) {
+    el.remove();
+  }
 }
 
 init();
