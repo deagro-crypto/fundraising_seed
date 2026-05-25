@@ -62,9 +62,9 @@ const HANDLERS = {
   updateRound: (p, user) => Database.Rounds.update(p.id, p, user),
   closeRound:  (p, user) => Database.Rounds.update(p.id, { status: 'closed', closed_at: today_() }, user),
 
-  // Associação fundo ↔ rodada
-  addFundsToRound: (p, user) => bulkRoundMembership_(p.round_id, p.fund_ids || [], 'add', user),
-  removeFundFromRound: (p, user) => bulkRoundMembership_(p.round_id, [p.fund_id], 'remove', user),
+  // Associação fundo ↔ rodada (suporta múltiplos)
+  addFundsToRound:      (p, user) => bulkRoundMembership_(p.round_id, p.fund_ids || [], 'add',    user),
+  removeFundsFromRound: (p, user) => bulkRoundMembership_(p.round_id, p.fund_ids || [], 'remove', user),
 
   // Notes (append-only)
   listNotes:   (p)       => Database.Notes.listByFund(p.fund_id),
