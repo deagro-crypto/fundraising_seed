@@ -60,9 +60,12 @@
       <div class="dash-row">
         <div class="card">
           <h3>Funil da rodada</h3>
-          <div class="funnel" id="funnel"></div>
+          <div class="funnel-wrap">
+            <div class="funnel-shape" id="funnel-shape"></div>
+            <div class="funnel-side" id="funnel-side"></div>
+          </div>
         </div>
-        <div class="card">
+        <div class="card card--center">
           <h3>Fundos por tier</h3>
           <div class="pie-wrap">
             <svg viewBox="0 0 200 200" id="pie-tier" class="pie"></svg>
@@ -116,22 +119,25 @@
       </div>
 
       <div class="table-wrap card card--bordered">
-        <table class="funds-table">
-          <thead>
-            <tr>
-              <th>Fundo</th>
-              <th>Tier</th>
-              <th>Foco</th>
-              <th>LATAM</th>
-              <th>Status</th>
-              <th class="right">Proposto</th>
-              <th class="right">Comitado</th>
-              <th>Tese</th>
-            </tr>
-          </thead>
-          <tbody id="funds-tbody"></tbody>
-        </table>
-        <div id="empty-state" class="empty hidden">Nenhum fundo bate com os filtros.</div>
+        <div class="table-scroll">
+          <table class="funds-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="name">Fundo <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="tier">Tier <span class="sort-ind"></span></th>
+                <th>Foco</th>
+                <th>LATAM</th>
+                <th>Status</th>
+                <th class="right sortable" data-sort="proposed_ticket">Proposto <span class="sort-ind"></span></th>
+                <th class="right sortable" data-sort="committed_ticket">Comitado <span class="sort-ind"></span></th>
+                <th>Tese</th>
+              </tr>
+            </thead>
+            <tbody id="funds-tbody"></tbody>
+          </table>
+          <div id="empty-state" class="empty hidden">Nenhum fundo bate com os filtros.</div>
+        </div>
+        <div class="pagination" id="funds-pagination"></div>
       </div>
     </section>
 
@@ -259,9 +265,14 @@
         <label>Tese
           <textarea name="thesis" rows="2" placeholder="Tese principal do fundo"></textarea>
         </label>
-        <label>Observações (DeAgro + advisor)
-          <textarea name="notes" rows="3" placeholder="Notas livres compartilhadas"></textarea>
-        </label>
+        <div class="grid-2">
+          <label>Observação DeAgro
+            <textarea name="notes_deagro" rows="3" placeholder="Notas da DeAgro"></textarea>
+          </label>
+          <label>Observação Advisor
+            <textarea name="notes_advisor" rows="3" placeholder="Notas do advisor"></textarea>
+          </label>
+        </div>
 
         <div class="modal__footer">
           <button type="button" class="btn-ghost" data-close>Fechar</button>

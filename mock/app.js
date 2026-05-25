@@ -71,7 +71,8 @@ let state = {
   funds: seedFunds.map((r, i) => ({
     id: uid(),
     name: r[0], website: r[1], tier: r[2],
-    focus: r[3], latam: r[4], thesis: r[5], notes: '',
+    focus: r[3], latam: r[4], thesis: r[5],
+    notes_deagro: '', notes_advisor: '',
     location: '', work_format: '',
     status: seedStatusCycle[i % seedStatusCycle.length],
     proposed_ticket: [250000, 500000, 1000000, 150000][i % 4],
@@ -89,6 +90,9 @@ let state = {
   activeRoundId: null,
   detailRoundId: null,
   filters: { tier: 'all', q: '', focus: '', latam: '', status: '' },
+  sort: { key: null, dir: 'asc' },
+  page: 1,
+  pageSize: 20,
 };
 state.activeRoundId = state.rounds[0].id;
 
@@ -170,21 +174,22 @@ function renderDashboard() {
 function renderFunnel() {
   const counts = {};
   STATUSES.forEach(s => counts[s.id] = state.funds.filter(f => f.status === s.id).length);
-  const maxCount = Math.max(1, ...Object.values(counts));
-  const positive = FUNNEL_ORDER.map(id => ({ id, ...statusOf(id), n: counts[id] || 0 }));
-  const negative = ['discarded','stalled'].map(id => ({ id, ...statusOf(id), n: counts[id] || 0 }));
-  $('#funnel').innerHTML = [
-    ...positive.map(r => funnelRow(r, maxCount, false)),
-    ...negative.map(r => funnelRow(r, maxCount, true)),
-  ].join('');
-}
-function funnelRow(r, max, neg) {
-  const pct = (r.n / max) * 100;
-  return `<div class="funnel-row ${neg ? 'is-neg' : ''}">
-    <div>${escapeHtml(r.label)}</div>
-    <div class="funnel-row__bar"><div class="funnel-row__fill" style="width:${pct}%"></div></div>
-    <div class="funnel-row__count">${r.n}</div>
-  </div>`;
+
+  // Funil: largura decrescente de 100% a ~36%, valores dentro
+  const positives = FUNNEL_ORDER.map(id => ({ id, ...statusOf(id), n: counts[id] || 0 }));
+  const N = positives.length;
+  $('#funnel-shape').innerHTML = positives.map((r, i) => {
+    const w = 100 - i * ((100 - 38) / (N - 1));
+    return `<div class="funnel-band" style="width:${w}%">
+      <span class="lbl">${escapeHtml(r.label)}</span>
+      <span class="n">${r.n}</span>
+    </div>`;
+  }).join('');
+
+  // Itens negativos do lado, menores e em vermelho
+  const negatives = ['discarded','stalled'].map(id => ({ ...statusOf(id), n: counts[id] || 0 }));
+  $('#funnel-side').innerHTML = `<div class="funnel-side__title">Saídas do funil</div>` +
+    negatives.map(r => `<div class="fs-row"><span>${escapeHtml(r.label)}</span><span class="n">${r.n}</span></div>`).join('');
 }
 
 function renderPie() {
@@ -268,19 +273,27 @@ function renderRoundDetail() {
 }
 
 function renderKanban() {
-  const cols = STATUSES.map(s => {
+  const positives = FUNNEL_ORDER.map(id => statusOf(id));
+  const negatives = ['discarded','stalled'].map(id => statusOf(id));
+
+  const renderCol = (s, isNeg) => {
     const funds = state.funds.filter(f => f.status === s.id);
-    const cards = funds.map(f => `
-      <div class="k-card tier-${f.tier}" data-edit="${f.id}">
-        <div class="k-card__name">${escapeHtml(f.name)}</div>
-        <div class="k-card__sub">T${f.tier} · ${fmt(f.proposed_ticket)}</div>
-      </div>`).join('') || '<div class="k-col__empty">—</div>';
-    return `<div class="k-col">
+    const cards = funds.length
+      ? funds.map(f => `
+          <div class="k-card tier-${f.tier}" data-edit="${f.id}">
+            <div class="k-card__name">${escapeHtml(f.name)}</div>
+            <div class="k-card__sub">T${f.tier} · ${fmt(f.proposed_ticket)}</div>
+          </div>`).join('')
+      : '<div class="k-col__empty">—</div>';
+    return `<div class="k-col ${isNeg ? 'is-neg' : ''}">
       <div class="k-col__head"><span>${escapeHtml(s.label)}</span><span class="k-col__count">${funds.length}</span></div>
-      ${cards}
+      <div class="k-col__list">${cards}</div>
     </div>`;
-  }).join('');
-  $('#kanban').innerHTML = cols;
+  };
+
+  $('#kanban').innerHTML = `
+    <div class="kanban-row positives">${positives.map(s => renderCol(s, false)).join('')}</div>
+    <div class="kanban-row negatives">${negatives.map(s => renderCol(s, true)).join('')}</div>`;
   $$('#kanban [data-edit]').forEach(c => c.addEventListener('click', () => openFundModal(c.dataset.edit)));
 }
 
@@ -288,7 +301,7 @@ function renderKanban() {
 function renderFunds() {
   const { tier, q, focus, latam, status } = state.filters;
   const ql = q.trim().toLowerCase();
-  const rows = state.funds.filter(f => {
+  let rows = state.funds.filter(f => {
     if (tier !== 'all' && f.tier !== Number(tier)) return false;
     if (focus && !f.focus.includes(focus)) return false;
     if (latam === 'yes' && !f.latam) return false;
@@ -298,8 +311,26 @@ function renderFunds() {
     return true;
   });
 
+  // sort
+  const { key, dir } = state.sort;
+  if (key) {
+    const mult = dir === 'asc' ? 1 : -1;
+    rows = [...rows].sort((a, b) => {
+      const av = a[key], bv = b[key];
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * mult;
+      return String(av || '').localeCompare(String(bv || ''), 'pt-BR') * mult;
+    });
+  }
+
+  // pagination
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
+  if (state.page > totalPages) state.page = totalPages;
+  const start = (state.page - 1) * state.pageSize;
+  const pageRows = rows.slice(start, start + state.pageSize);
+
   $('#empty-state').classList.toggle('hidden', rows.length > 0);
-  $('#funds-tbody').innerHTML = rows.map(f => {
+  $('#funds-tbody').innerHTML = pageRows.map(f => {
     const st = statusOf(f.status);
     const focusChips = f.focus.map(x => `<span class="chip focus-${x}">${x}</span>`).join('');
     const site = f.website ? `<a class="site-link" href="${f.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>` : '';
@@ -316,6 +347,38 @@ function renderFunds() {
       </tr>`;
   }).join('');
   $$('#funds-tbody tr[data-edit]').forEach(r => r.addEventListener('click', () => openFundModal(r.dataset.edit)));
+
+  renderPagination(total, totalPages);
+  renderSortIndicators();
+}
+
+function renderPagination(total, totalPages) {
+  const p = state.page;
+  const start = total === 0 ? 0 : (p - 1) * state.pageSize + 1;
+  const end = Math.min(total, p * state.pageSize);
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) pages.push(i);
+  $('#funds-pagination').innerHTML = `
+    <div>${total === 0 ? 'Nenhum resultado' : `${start}–${end} de ${total}`}</div>
+    <div class="pagination__pages">
+      <button data-page="prev" ${p <= 1 ? 'disabled' : ''}>‹</button>
+      ${pages.map(i => `<button data-page="${i}" class="${i === p ? 'active' : ''}">${i}</button>`).join('')}
+      <button data-page="next" ${p >= totalPages ? 'disabled' : ''}>›</button>
+    </div>`;
+  $$('#funds-pagination button').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.page;
+    if (v === 'prev') state.page = Math.max(1, state.page - 1);
+    else if (v === 'next') state.page = Math.min(totalPages, state.page + 1);
+    else state.page = Number(v);
+    renderFunds();
+  }));
+}
+
+function renderSortIndicators() {
+  $$('.funds-table th.sortable').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.dataset.sort === state.sort.key) th.classList.add('sort-' + state.sort.dir);
+  });
 }
 
 /* ===================== ROUNDS LIST ===================== */
@@ -355,7 +418,8 @@ function openFundModal(id) {
     form.proposed_ticket.value = editing.proposed_ticket || '';
     form.committed_ticket.value = editing.committed_ticket || '';
     form.thesis.value = editing.thesis || '';
-    form.notes.value = editing.notes || '';
+    form.notes_deagro.value = editing.notes_deagro || '';
+    form.notes_advisor.value = editing.notes_advisor || '';
     $$('#fund-form input[name=focus]').forEach(c => c.checked = editing.focus.includes(c.value));
     form.latam.checked = !!editing.latam;
     setModalMode('view');
@@ -396,7 +460,8 @@ async function submitFund(e) {
     proposed_ticket: Number(fd.get('proposed_ticket') || 0),
     committed_ticket: Number(fd.get('committed_ticket') || 0),
     thesis: fd.get('thesis').trim(),
-    notes: fd.get('notes').trim(),
+    notes_deagro: (fd.get('notes_deagro') || '').trim(),
+    notes_advisor: (fd.get('notes_advisor') || '').trim(),
     focus,
     latam: form.latam.checked,
   };
@@ -466,24 +531,36 @@ function init() {
   });
   $('#back-to-rounds').addEventListener('click', () => switchView('rounds'));
 
+  const resetPage = () => { state.page = 1; };
+
   $$('#tier-tabs .tab').forEach(t => t.addEventListener('click', () => {
     $$('#tier-tabs .tab').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     state.filters.tier = t.dataset.tier;
+    resetPage();
     renderFunds();
   }));
 
-  $('#filter-q').addEventListener('input', e => { state.filters.q = e.target.value; renderFunds(); });
-  $('#filter-focus').addEventListener('change', e => { state.filters.focus = e.target.value; renderFunds(); });
-  $('#filter-latam').addEventListener('change', e => { state.filters.latam = e.target.value; renderFunds(); });
-  $('#filter-status').addEventListener('change', e => { state.filters.status = e.target.value; renderFunds(); });
+  $('#filter-q').addEventListener('input', e => { state.filters.q = e.target.value; resetPage(); renderFunds(); });
+  $('#filter-focus').addEventListener('change', e => { state.filters.focus = e.target.value; resetPage(); renderFunds(); });
+  $('#filter-latam').addEventListener('change', e => { state.filters.latam = e.target.value; resetPage(); renderFunds(); });
+  $('#filter-status').addEventListener('change', e => { state.filters.status = e.target.value; resetPage(); renderFunds(); });
   $('#clear-filters').addEventListener('click', () => {
     state.filters = { tier: 'all', q: '', focus: '', latam: '', status: '' };
+    state.sort = { key: null, dir: 'asc' };
+    resetPage();
     $('#filter-q').value = ''; $('#filter-focus').value = '';
     $('#filter-latam').value = ''; $('#filter-status').value = '';
     $$('#tier-tabs .tab').forEach(x => x.classList.toggle('active', x.dataset.tier === 'all'));
     renderFunds();
   });
+
+  $$('.funds-table th.sortable').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.sort;
+    if (state.sort.key === k) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
+    else state.sort = { key: k, dir: 'asc' };
+    renderFunds();
+  }));
 
   $('#new-fund-btn').addEventListener('click', () => openFundModal(null));
   $('#fund-form').addEventListener('submit', submitFund);
