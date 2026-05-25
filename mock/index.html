@@ -50,21 +50,23 @@
           <div class="kpi__sub muted" id="kpi-pipeline-n">0 fundos</div>
         </div>
         <div class="card kpi">
-          <div class="kpi__label">Universo de fundos</div>
+          <div class="kpi__label">Fundos adicionados à rodada</div>
           <div class="kpi__value" id="kpi-universe">0</div>
           <div class="kpi__sub muted" id="kpi-active">0 ativos no funil</div>
         </div>
       </div>
 
-      <!-- Funil + Pizza -->
-      <div class="dash-row">
-        <div class="card">
-          <h3>Funil da rodada</h3>
-          <div class="funnel-wrap">
-            <div class="funnel-shape" id="funnel-shape"></div>
-            <div class="funnel-side" id="funnel-side"></div>
-          </div>
+      <!-- Funil (linha inteira) -->
+      <div class="card">
+        <h3>Funil da rodada</h3>
+        <div class="funnel-wrap">
+          <div class="funnel-shape" id="funnel-shape"></div>
+          <div class="funnel-side" id="funnel-side"></div>
         </div>
+      </div>
+
+      <!-- Pizza + Distribuição (mesma linha) -->
+      <div class="dash-row dash-row--equal" style="margin-top:1rem">
         <div class="card card--center">
           <h3>Fundos por tier</h3>
           <div class="pie-wrap">
@@ -72,12 +74,10 @@
             <ul class="legend" id="pie-tier-legend"></ul>
           </div>
         </div>
-      </div>
-
-      <!-- Distribuição por foco/tese -->
-      <div class="card">
-        <h3>Distribuição por foco de tese</h3>
-        <div class="bars" id="focus-bars"></div>
+        <div class="card">
+          <h3>Distribuição por foco de tese</h3>
+          <div class="bars" id="focus-bars"></div>
+        </div>
       </div>
     </section>
 
@@ -168,7 +168,10 @@
           <h2 id="rd-name" style="margin-top:.25rem">Rodada</h2>
           <p class="muted" id="rd-meta">—</p>
         </div>
-        <button class="btn-secondary" id="edit-round-btn">Editar rodada</button>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn-primary" id="add-funds-btn">+ Adicionar fundos à rodada</button>
+          <button class="btn-secondary" id="edit-round-btn">Editar rodada</button>
+        </div>
       </div>
 
       <div class="round-progress card card--bordered">
@@ -324,6 +327,34 @@
           <button type="submit" class="btn-primary">Salvar</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- =================== MODAL ADD FUNDS =================== -->
+  <div class="modal hidden" id="add-funds-modal">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__panel">
+      <div class="modal__header">
+        <h3>Adicionar fundos à rodada</h3>
+        <button class="icon-btn" data-close>×</button>
+      </div>
+      <div class="modal__body">
+        <div class="filters" style="margin-bottom:.5rem;padding:.6rem .8rem">
+          <input id="add-q" type="search" placeholder="Buscar nome…" />
+          <select id="add-tier">
+            <option value="">Tier (todos)</option>
+            <option value="1">Tier 1</option>
+            <option value="2">Tier 2</option>
+            <option value="3">Tier 3</option>
+          </select>
+          <span class="muted" id="add-count">0 disponíveis</span>
+        </div>
+        <div class="add-list" id="add-list"></div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn-ghost" data-close>Cancelar</button>
+        <button type="button" class="btn-primary" id="add-confirm" disabled>Adicionar (0)</button>
+      </div>
     </div>
   </div>
 
