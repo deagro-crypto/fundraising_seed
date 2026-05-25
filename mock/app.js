@@ -2,19 +2,21 @@
    A camada `api` será trocada por chamadas ao Apps Script Web App. */
 
 const STATUSES = [
-  { id: 'todo',        label: 'A contatar',         cls: 'status-todo' },
-  { id: 'contacted',   label: 'Contato feito',      cls: 'status-contacted' },
-  { id: 'waiting',     label: 'Aguardando resposta',cls: 'status-waiting' },
-  { id: 'interest',    label: 'Interesse',          cls: 'status-interest' },
-  { id: 'discarded',   label: 'Descartado',         cls: 'status-discarded' },
-  { id: 'negotiation', label: 'Em negociação',      cls: 'status-negotiation' },
-  { id: 'committed',   label: 'Comitado',           cls: 'status-committed' },
-  { id: 'closed',      label: 'Fechado',            cls: 'status-closed' },
-  { id: 'stalled',     label: 'Não evoluiu',        cls: 'status-stalled' },
+  { id: 'todo',                 label: 'A contatar',              cls: 'status-todo' },
+  { id: 'contacted',            label: 'Contato feito',           cls: 'status-contacted' },
+  { id: 'waiting',              label: 'Aguardando resposta',     cls: 'status-waiting' },
+  { id: 'interest',             label: 'Interesse',               cls: 'status-interest' },
+  { id: 'discarded',            label: 'Descartado',              cls: 'status-discarded' },
+  { id: 'no_interest_company',  label: 'Sem interesse da empresa',cls: 'status-discarded' },
+  { id: 'negotiation',          label: 'Em negociação',           cls: 'status-negotiation' },
+  { id: 'committed',            label: 'Comitado',                cls: 'status-committed' },
+  { id: 'closed',               label: 'Fechado',                 cls: 'status-closed' },
+  { id: 'stalled',              label: 'Não evoluiu',             cls: 'status-stalled' },
 ];
 
 const FUNNEL_ORDER = ['todo','contacted','waiting','interest','negotiation','committed','closed'];
-const NEGATIVE = new Set(['discarded','stalled']);
+const NEGATIVE_ORDER = ['discarded','no_interest_company','stalled'];
+const NEGATIVE = new Set(NEGATIVE_ORDER);
 
 const FOCUS_COLORS = {
   Impacto: '#1f4d2a', Tech: '#005577', Blockchain: '#4a2e8c', Crypto: '#8a4b00',
@@ -192,7 +194,7 @@ function renderFunnel(funds) {
   }).join('');
 
   // Itens negativos do lado, menores e em vermelho
-  const negatives = ['discarded','stalled'].map(id => ({ ...statusOf(id), n: counts[id] || 0 }));
+  const negatives = NEGATIVE_ORDER.map(id => ({ ...statusOf(id), n: counts[id] || 0 }));
   $('#funnel-side').innerHTML = `<div class="funnel-side__title">Saídas do funil</div>` +
     negatives.map(r => `<div class="fs-row"><span>${escapeHtml(r.label)}</span><span class="n">${r.n}</span></div>`).join('');
 }
@@ -280,7 +282,7 @@ function renderRoundDetail() {
 
 function renderKanban(roundFunds) {
   const positives = FUNNEL_ORDER.map(id => statusOf(id));
-  const negatives = ['discarded','stalled'].map(id => statusOf(id));
+  const negatives = NEGATIVE_ORDER.map(id => statusOf(id));
 
   const renderCol = (s, isNeg) => {
     const funds = roundFunds.filter(f => f.status === s.id);
@@ -545,10 +547,12 @@ function renderAddList() {
   $('#add-count').textContent = `${filtered.length} disponíve${filtered.length === 1 ? 'l' : 'is'}`;
   $('#add-list').innerHTML = filtered.length ? filtered.map(f => `
     <label class="add-row">
-      <input type="checkbox" data-id="${f.id}" ${state.addSelection.has(f.id) ? 'checked' : ''} />
-      <span><b>${escapeHtml(f.name)}</b></span>
-      <span><span class="chip tier-${f.tier}">T${f.tier}</span></span>
-      <span class="sm">${escapeHtml(f.thesis || '')}</span>
+      <input type="checkbox" class="add-row__cb" data-id="${f.id}" ${state.addSelection.has(f.id) ? 'checked' : ''} />
+      <div class="add-row__card">
+        <span class="add-row__name">${escapeHtml(f.name)}</span>
+        <span class="chip tier-${f.tier}">T${f.tier}</span>
+        <span class="add-row__thesis">${escapeHtml(f.thesis || '')}</span>
+      </div>
     </label>`).join('') : '<div class="empty">Todos os fundos já estão na rodada</div>';
   $$('#add-list input[type=checkbox]').forEach(c => c.addEventListener('change', e => {
     const id = e.target.dataset.id;
