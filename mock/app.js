@@ -1,20 +1,27 @@
-/* DeAgro Fundraising CRM — mock client.
-   Camada `api` é stub em memória; trocar por fetch('<webapp>/exec?action=...')
-   quando o Apps Script estiver no ar. */
+/* DeAgro Fundraising CRM — mock client (in-memory).
+   A camada `api` será trocada por chamadas ao Apps Script Web App. */
 
 const STATUSES = [
-  { id: 'todo',       label: 'A contatar',        cls: 'status-todo' },
-  { id: 'contacted',  label: 'Contato feito',     cls: 'status-contacted' },
-  { id: 'waiting',    label: 'Aguardando resposta', cls: 'status-waiting' },
-  { id: 'diligence',  label: 'Em diligência',     cls: 'status-diligence' },
-  { id: 'interest',   label: 'Interesse',         cls: 'status-interest' },
-  { id: 'committed',  label: 'Comitado',          cls: 'status-committed' },
-  { id: 'pass',       label: 'Passou',            cls: 'status-pass' },
+  { id: 'todo',        label: 'A contatar',         cls: 'status-todo' },
+  { id: 'contacted',   label: 'Contato feito',      cls: 'status-contacted' },
+  { id: 'waiting',     label: 'Aguardando resposta',cls: 'status-waiting' },
+  { id: 'interest',    label: 'Interesse',          cls: 'status-interest' },
+  { id: 'discarded',   label: 'Descartado',         cls: 'status-discarded' },
+  { id: 'negotiation', label: 'Em negociação',      cls: 'status-negotiation' },
+  { id: 'committed',   label: 'Comitado',           cls: 'status-committed' },
+  { id: 'closed',      label: 'Fechado',            cls: 'status-closed' },
+  { id: 'stalled',     label: 'Não evoluiu',        cls: 'status-stalled' },
 ];
 
-/* ---------- Seed data (extraído do Excel Base) ---------- */
+const FUNNEL_ORDER = ['todo','contacted','waiting','interest','negotiation','committed','closed'];
+const NEGATIVE = new Set(['discarded','stalled']);
+
+const FOCUS_COLORS = {
+  Impacto: '#1f4d2a', Tech: '#005577', Blockchain: '#4a2e8c', Crypto: '#8a4b00',
+};
+
+/* ---------- Seed data (Excel Base) ---------- */
 const seedFunds = [
-  // Tier 1
   ['Accion Venture Lab','https://accion.org/venturelab',1,['Impacto','Tech'],true,'impacto financeiro inclusivo + fintech / web3'],
   ['Quona Capital','https://quona.com',1,['Impacto','Tech','Blockchain'],true,'fintech inclusiva (infra próxima de blockchain)'],
   ['IGNIA','https://ignia.com.mx',1,['Impacto','Tech'],true,'impacto + tech, forte em LATAM'],
@@ -27,7 +34,6 @@ const seedFunds = [
   ['Toucan Protocol','https://toucan.earth',1,['Impacto','Tech','Blockchain'],false,'tokenização de créditos de carbono'],
   ['Celo Foundation','https://celo.org',1,['Impacto','Tech'],true,'forte em impacto + LATAM + inclusão financeira'],
   ['Multicoin Capital','https://multicoin.capital',1,['Impacto','Tech','Blockchain','Crypto'],false,'state-free money e open finance'],
-  // Tier 2
   ['Potencia Ventures','',2,['Impacto','Tech'],true,'impacto social + tech'],
   ['Village Capital','https://vilcap.com',2,['Impacto','Tech'],true,'impacto + inovação — com blockchain'],
   ['LGT Venture Philanthropy','https://lgtvp.com',2,['Impacto'],true,'forte em clima e food systems'],
@@ -43,7 +49,6 @@ const seedFunds = [
   ['Archetype','https://archetype.fund',2,['Impacto','Tech','Blockchain','Crypto'],false,'early-stage crypto'],
   ['Placeholder VC','https://placeholder.vc',2,['Tech','Blockchain','Crypto'],false,'open-source, decentralized networks'],
   ['Paradigm','https://paradigm.xyz',2,['Tech','Blockchain'],false,'research-driven, open blockchain tech'],
-  // Tier 3
   ['Omidyar Network','https://omidyar.com',3,['Impacto','Tech','Crypto'],true,'impacto sistêmico + govtech + crypto'],
   ['Elevar Equity','https://elevarequity.com',3,['Impacto','Tech'],true,'inclusão econômica'],
   ['Rayo Capital','',3,['Tech'],true,'foco em web3 LATAM'],
@@ -60,7 +65,7 @@ const seedFunds = [
 ];
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const seedStatus = ['todo','todo','contacted','waiting','diligence','interest'];
+const seedStatusCycle = ['todo','todo','contacted','waiting','negotiation','interest','discarded','stalled'];
 
 let state = {
   funds: seedFunds.map((r, i) => ({
@@ -68,19 +73,20 @@ let state = {
     name: r[0], website: r[1], tier: r[2],
     focus: r[3], latam: r[4], thesis: r[5], notes: '',
     location: '', work_format: '',
-    status: seedStatus[i % seedStatus.length],
+    status: seedStatusCycle[i % seedStatusCycle.length],
     proposed_ticket: [250000, 500000, 1000000, 150000][i % 4],
-    committed_ticket: (i % 7 === 0) ? 250000 : 0,
+    committed_ticket: (i % 9 === 0) ? 250000 : 0,
   })),
   rounds: [
     { id: uid(), name: 'Seed 2026', target: 4000000, status: 'open', opened_at: '2026-01-15' },
   ],
   activeRoundId: null,
+  detailRoundId: null,
   filters: { tier: 'all', q: '', focus: '', latam: '', status: '' },
 };
 state.activeRoundId = state.rounds[0].id;
 
-/* ---------- "API" mock (substituir por fetch ao Apps Script) ---------- */
+/* ---------- "API" mock ---------- */
 const api = {
   listFunds: () => Promise.resolve(state.funds),
   saveFund: (f) => {
@@ -104,63 +110,169 @@ const fmt = (n) => n ? 'US$ ' + Number(n).toLocaleString('en-US') : 'US$ 0';
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const statusOf = (id) => STATUSES.find(s => s.id === id) || STATUSES[0];
+const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const activeRound = () => state.rounds.find(r => r.id === state.activeRoundId) || state.rounds[0];
 
 function populateStatusSelect(sel, includeAll) {
-  sel.innerHTML = '';
-  if (includeAll) sel.innerHTML = '<option value="">Status (todos)</option>';
+  sel.innerHTML = includeAll ? '<option value="">Status (todos)</option>' : '';
   STATUSES.forEach(s => {
     const o = document.createElement('option');
     o.value = s.id; o.textContent = s.label; sel.appendChild(o);
   });
 }
 
-/* ---------- Views ---------- */
+/* ---------- View switching ---------- */
 function switchView(name) {
   $$('.view').forEach(v => v.classList.add('hidden'));
   $('#view-' + name).classList.remove('hidden');
-  $$('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.view === name));
+  const navName = (name === 'round-detail') ? 'rounds' : name;
+  $$('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.view === navName));
   if (name === 'dashboard') renderDashboard();
   if (name === 'funds') renderFunds();
   if (name === 'rounds') renderRounds();
+  if (name === 'round-detail') renderRoundDetail();
 }
 
-/* ---------- Dashboard ---------- */
+/* ===================== DASHBOARD ===================== */
 function renderDashboard() {
-  const round = state.rounds.find(r => r.id === state.activeRoundId) || state.rounds[0];
+  const round = activeRound();
   if (!round) return;
-  $('#round-name').textContent = round.name;
-  const committed = state.funds.reduce((s, f) => s + (Number(f.committed_ticket) || 0), 0);
-  const pipeline = state.funds
-    .filter(f => ['diligence','interest'].includes(f.status))
-    .reduce((s, f) => s + (Number(f.proposed_ticket) || 0), 0);
-  $('#round-target').textContent = fmt(round.target);
-  $('#round-committed').textContent = fmt(committed);
-  $('#round-pipeline').textContent = fmt(pipeline);
-  const pct = round.target ? Math.min(100, (committed / round.target) * 100) : 0;
-  $('#round-pct').textContent = pct.toFixed(1) + '%';
-  $('#round-bar').style.width = pct + '%';
+  $('#dash-round-name').textContent = round.name;
+  $('#dash-round-meta').textContent = `Aberta em ${round.opened_at || '—'} · ${round.status === 'open' ? 'Aberta' : 'Fechada'}`;
 
-  // tier split
+  const committed = state.funds.reduce((s, f) => s + (+f.committed_ticket || 0), 0);
+  const pipelineFunds = state.funds.filter(f => f.status === 'negotiation');
+  const pipeline = pipelineFunds.reduce((s, f) => s + (+f.proposed_ticket || 0), 0);
+  const pct = round.target ? Math.min(100, committed / round.target * 100) : 0;
+  const universe = state.funds.length;
+  const active = state.funds.filter(f => !NEGATIVE.has(f.status) && f.status !== 'closed').length;
+
+  $('#kpi-target').textContent = fmt(round.target);
+  $('#kpi-committed').textContent = fmt(committed);
+  $('#kpi-bar').style.width = pct + '%';
+  $('#kpi-pct').textContent = pct.toFixed(1) + '% do target';
+  $('#kpi-pipeline').textContent = fmt(pipeline);
+  $('#kpi-pipeline-n').textContent = pipelineFunds.length + ' fundos';
+  $('#kpi-universe').textContent = universe;
+  $('#kpi-active').textContent = active + ' ativos no funil';
+
+  renderFunnel();
+  renderPie();
+  renderFocusBars();
+}
+
+function renderFunnel() {
+  const counts = {};
+  STATUSES.forEach(s => counts[s.id] = state.funds.filter(f => f.status === s.id).length);
+  const maxCount = Math.max(1, ...Object.values(counts));
+  const positive = FUNNEL_ORDER.map(id => ({ id, ...statusOf(id), n: counts[id] || 0 }));
+  const negative = ['discarded','stalled'].map(id => ({ id, ...statusOf(id), n: counts[id] || 0 }));
+  $('#funnel').innerHTML = [
+    ...positive.map(r => funnelRow(r, maxCount, false)),
+    ...negative.map(r => funnelRow(r, maxCount, true)),
+  ].join('');
+}
+function funnelRow(r, max, neg) {
+  const pct = (r.n / max) * 100;
+  return `<div class="funnel-row ${neg ? 'is-neg' : ''}">
+    <div>${escapeHtml(r.label)}</div>
+    <div class="funnel-row__bar"><div class="funnel-row__fill" style="width:${pct}%"></div></div>
+    <div class="funnel-row__count">${r.n}</div>
+  </div>`;
+}
+
+function renderPie() {
+  const counts = [1,2,3].map(t => state.funds.filter(f => f.tier === t).length);
+  const total = counts.reduce((a,b) => a+b, 0) || 1;
+  const colors = ['#DAA520','#588157','#CED4DA'];
+  const labels = ['Tier 1','Tier 2','Tier 3'];
+  const svg = $('#pie-tier');
+  svg.innerHTML = '';
+  let a0 = -Math.PI/2;
+  const cx=100, cy=100, r=85;
+  counts.forEach((n, i) => {
+    if (!n) return;
+    const a1 = a0 + (n/total) * Math.PI * 2;
+    const large = (a1 - a0) > Math.PI ? 1 : 0;
+    const x0 = cx + r*Math.cos(a0), y0 = cy + r*Math.sin(a0);
+    const x1 = cx + r*Math.cos(a1), y1 = cy + r*Math.sin(a1);
+    const d = `M${cx},${cy} L${x0},${y0} A${r},${r} 0 ${large},1 ${x1},${y1} Z`;
+    svg.insertAdjacentHTML('beforeend', `<path d="${d}" fill="${colors[i]}" stroke="#fff" stroke-width="2"/>`);
+    a0 = a1;
+  });
+  // donut hole
+  svg.insertAdjacentHTML('beforeend', `<circle cx="${cx}" cy="${cy}" r="42" fill="#fff"/>
+    <text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="22" font-weight="700" fill="#344E41">${total}</text>
+    <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="10" fill="#495057">fundos</text>`);
+
+  $('#pie-tier-legend').innerHTML = labels.map((l, i) =>
+    `<li><span class="sw" style="background:${colors[i]}"></span>${l} · <b>${counts[i]}</b></li>`
+  ).join('');
+}
+
+function renderFocusBars() {
+  const tags = ['Impacto','Tech','Blockchain','Crypto'];
+  const counts = tags.map(t => state.funds.filter(f => f.focus.includes(t)).length);
+  const latamN = state.funds.filter(f => f.latam).length;
+  const all = [...tags.map((t,i) => [t, counts[i], FOCUS_COLORS[t]]), ['LATAM', latamN, '#B8860B']];
+  const max = Math.max(1, ...all.map(r => r[1]));
+  $('#focus-bars').innerHTML = all.map(([label, n, color]) =>
+    `<div class="bar-row">
+      <div>${label}</div>
+      <div class="bar-row__bar"><div class="bar-row__fill" style="width:${(n/max)*100}%;background:${color}"></div></div>
+      <div class="bar-row__n">${n}</div>
+    </div>`).join('');
+}
+
+/* ===================== ROUND DETAIL (com Kanban) ===================== */
+function renderRoundDetail() {
+  const id = state.detailRoundId || state.activeRoundId;
+  const round = state.rounds.find(r => r.id === id);
+  if (!round) return;
+  state.detailRoundId = round.id;
+
+  $('#rd-name').textContent = round.name;
+  $('#rd-meta').textContent = `Aberta em ${round.opened_at || '—'} · ${round.status === 'open' ? 'Aberta' : 'Fechada'}`;
+
+  const committed = state.funds.reduce((s, f) => s + (+f.committed_ticket || 0), 0);
+  const pipeline = state.funds.filter(f => f.status === 'negotiation').reduce((s,f)=>s+(+f.proposed_ticket||0), 0);
+  const pct = round.target ? Math.min(100, committed/round.target*100) : 0;
+  $('#rd-target').textContent = fmt(round.target);
+  $('#rd-committed').textContent = fmt(committed);
+  $('#rd-pipeline').textContent = fmt(pipeline);
+  $('#rd-pct').textContent = pct.toFixed(1) + '%';
+  $('#rd-bar').style.width = pct + '%';
+
   const byTier = [1,2,3].map(t => ({
     t,
     n: state.funds.filter(f => f.tier === t).length,
     cm: state.funds.filter(f => f.tier === t).reduce((s,f)=>s+(+f.committed_ticket||0),0),
   }));
-  $('#tier-split').innerHTML = byTier.map(b =>
+  $('#rd-tier-split').innerHTML = byTier.map(b =>
     `<div class="ts">Tier ${b.t}: <b>${b.n}</b> fundos · <b>${fmt(b.cm)}</b> comitado</div>`
   ).join('');
 
-  // pipeline cards
-  const active = state.funds.filter(f => !['pass','todo'].includes(f.status));
-  $('#pipeline').innerHTML = active.length ? active.map(f => `
-    <div class="pl-card tier-${f.tier}">
-      <h4>${escapeHtml(f.name)}</h4>
-      <div class="sm">${statusOf(f.status).label} · Tier ${f.tier}</div>
-      <div class="sm">Proposto: <b>${fmt(f.proposed_ticket)}</b>${f.committed_ticket ? ` · Comitado: <b>${fmt(f.committed_ticket)}</b>` : ''}</div>
-    </div>`).join('') : '<div class="empty">Nenhum fundo ativo no pipeline.</div>';
+  renderKanban();
 }
 
-/* ---------- Funds table ---------- */
+function renderKanban() {
+  const cols = STATUSES.map(s => {
+    const funds = state.funds.filter(f => f.status === s.id);
+    const cards = funds.map(f => `
+      <div class="k-card tier-${f.tier}" data-edit="${f.id}">
+        <div class="k-card__name">${escapeHtml(f.name)}</div>
+        <div class="k-card__sub">T${f.tier} · ${fmt(f.proposed_ticket)}</div>
+      </div>`).join('') || '<div class="k-col__empty">—</div>';
+    return `<div class="k-col">
+      <div class="k-col__head"><span>${escapeHtml(s.label)}</span><span class="k-col__count">${funds.length}</span></div>
+      ${cards}
+    </div>`;
+  }).join('');
+  $('#kanban').innerHTML = cols;
+  $$('#kanban [data-edit]').forEach(c => c.addEventListener('click', () => openFundModal(c.dataset.edit)));
+}
+
+/* ===================== FUNDS TABLE ===================== */
 function renderFunds() {
   const { tier, q, focus, latam, status } = state.filters;
   const ql = q.trim().toLowerCase();
@@ -178,46 +290,46 @@ function renderFunds() {
   $('#funds-tbody').innerHTML = rows.map(f => {
     const st = statusOf(f.status);
     const focusChips = f.focus.map(x => `<span class="chip focus-${x}">${x}</span>`).join('');
-    const site = f.website ? `<a href="${f.website}" target="_blank" rel="noopener">↗</a>` : '';
+    const site = f.website ? `<a class="site-link" href="${f.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>` : '';
     return `
-      <tr>
-        <td><b>${escapeHtml(f.name)}</b> ${site}<div class="sm muted">${escapeHtml(f.location||'')}</div></td>
+      <tr data-edit="${f.id}">
+        <td><b>${escapeHtml(f.name)}</b>${site}</td>
         <td><span class="chip tier-${f.tier}">T${f.tier}</span></td>
         <td>${focusChips}</td>
         <td>${f.latam ? '<span class="chip latam">LATAM</span>' : ''}</td>
         <td><span class="status-pill ${st.cls}">${st.label}</span></td>
         <td class="right">${fmt(f.proposed_ticket)}</td>
         <td class="right">${fmt(f.committed_ticket)}</td>
-        <td class="sm muted">${escapeHtml(f.thesis || '')}</td>
-        <td class="row-actions"><button class="link-btn" data-edit="${f.id}">editar</button></td>
+        <td class="cell-thesis">${escapeHtml(f.thesis || '')}</td>
       </tr>`;
   }).join('');
-
-  $$('#funds-tbody [data-edit]').forEach(b => b.addEventListener('click', () => openFundModal(b.dataset.edit)));
+  $$('#funds-tbody tr[data-edit]').forEach(r => r.addEventListener('click', () => openFundModal(r.dataset.edit)));
 }
 
-/* ---------- Rounds ---------- */
+/* ===================== ROUNDS LIST ===================== */
 function renderRounds() {
   $('#rounds-tbody').innerHTML = state.rounds.map(r => {
     const committed = state.funds.reduce((s, f) => s + (+f.committed_ticket || 0), 0);
-    return `<tr>
+    return `<tr data-open="${r.id}">
       <td><b>${escapeHtml(r.name)}</b></td>
-      <td>${fmt(r.target)}</td>
-      <td>${fmt(committed)}</td>
-      <td>${r.status === 'open' ? '<span class="status-pill status-diligence">Aberta</span>' : '<span class="status-pill status-todo">Fechada</span>'}</td>
+      <td class="right">${fmt(r.target)}</td>
+      <td class="right">${fmt(committed)}</td>
+      <td>${r.status === 'open' ? '<span class="status-pill status-negotiation">Aberta</span>' : '<span class="status-pill status-closed">Fechada</span>'}</td>
       <td>${r.opened_at || ''}</td>
-      <td class="row-actions"><button class="link-btn" data-edit-round="${r.id}">editar</button></td>
     </tr>`;
   }).join('');
-  $$('#rounds-tbody [data-edit-round]').forEach(b => b.addEventListener('click', () => openRoundModal(b.dataset.editRound)));
+  $$('#rounds-tbody tr[data-open]').forEach(r => r.addEventListener('click', () => {
+    state.detailRoundId = r.dataset.open;
+    switchView('round-detail');
+  }));
 }
 
-/* ---------- Fund modal ---------- */
+/* ===================== FUND MODAL ===================== */
 function openFundModal(id) {
   const form = $('#fund-form');
   form.reset();
   const editing = id ? state.funds.find(f => f.id === id) : null;
-  $('#fund-modal-title').textContent = editing ? 'Editar fundo' : 'Novo fundo';
+  $('#fund-modal-title').textContent = editing ? editing.name : 'Novo fundo';
   $('#delete-fund-btn').classList.toggle('hidden', !editing);
 
   if (editing) {
@@ -234,13 +346,27 @@ function openFundModal(id) {
     form.notes.value = editing.notes || '';
     $$('#fund-form input[name=focus]').forEach(c => c.checked = editing.focus.includes(c.value));
     form.latam.checked = !!editing.latam;
+    setModalMode('view');
+  } else {
+    setModalMode('edit');
   }
   $('#fund-modal').classList.remove('hidden');
 }
 
-function closeModals() {
-  $$('.modal').forEach(m => m.classList.add('hidden'));
+function setModalMode(mode) {
+  const body = $('#fund-form');
+  if (mode === 'view') {
+    body.classList.add('is-readonly');
+    $('#edit-mode-btn').classList.remove('hidden');
+    $('#save-fund-btn').classList.add('hidden');
+  } else {
+    body.classList.remove('is-readonly');
+    $('#edit-mode-btn').classList.add('hidden');
+    $('#save-fund-btn').classList.remove('hidden');
+  }
 }
+
+function closeModals() { $$('.modal').forEach(m => m.classList.add('hidden')); }
 
 async function submitFund(e) {
   e.preventDefault();
@@ -264,8 +390,8 @@ async function submitFund(e) {
   };
   await api.saveFund(payload);
   closeModals();
-  renderFunds();
-  renderDashboard();
+  renderFunds(); renderDashboard();
+  if (!$('#view-round-detail').classList.contains('hidden')) renderRoundDetail();
 }
 
 async function deleteFund() {
@@ -274,11 +400,11 @@ async function deleteFund() {
   if (!confirm('Excluir este fundo?')) return;
   await api.deleteFund(id);
   closeModals();
-  renderFunds();
-  renderDashboard();
+  renderFunds(); renderDashboard();
+  if (!$('#view-round-detail').classList.contains('hidden')) renderRoundDetail();
 }
 
-/* ---------- Round modal ---------- */
+/* ===================== ROUND MODAL ===================== */
 function openRoundModal(id) {
   const form = $('#round-form'); form.reset();
   const editing = id ? state.rounds.find(r => r.id === id) : null;
@@ -303,11 +429,10 @@ async function submitRound(e) {
   });
   closeModals();
   renderRounds(); renderDashboard();
+  if (!$('#view-round-detail').classList.contains('hidden')) renderRoundDetail();
 }
 
-function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-
-/* ---------- Wire up ---------- */
+/* ===================== WIRE UP ===================== */
 function init() {
   populateStatusSelect($('#fund-form select[name=status]'), false);
   populateStatusSelect($('#filter-status'), true);
@@ -315,6 +440,11 @@ function init() {
   $$('.nav-link').forEach(a => a.addEventListener('click', e => {
     e.preventDefault(); switchView(a.dataset.view);
   }));
+
+  $('#dash-open-round').addEventListener('click', () => {
+    state.detailRoundId = state.activeRoundId; switchView('round-detail');
+  });
+  $('#back-to-rounds').addEventListener('click', () => switchView('rounds'));
 
   $$('#tier-tabs .tab').forEach(t => t.addEventListener('click', () => {
     $$('#tier-tabs .tab').forEach(x => x.classList.remove('active'));
@@ -338,9 +468,10 @@ function init() {
   $('#new-fund-btn').addEventListener('click', () => openFundModal(null));
   $('#fund-form').addEventListener('submit', submitFund);
   $('#delete-fund-btn').addEventListener('click', deleteFund);
+  $('#edit-mode-btn').addEventListener('click', () => setModalMode('edit'));
 
   $('#new-round-btn').addEventListener('click', () => openRoundModal(null));
-  $('#edit-round-btn').addEventListener('click', () => openRoundModal(state.activeRoundId));
+  $('#edit-round-btn').addEventListener('click', () => openRoundModal(state.detailRoundId || state.activeRoundId));
   $('#round-form').addEventListener('submit', submitRound);
 
   $$('[data-close]').forEach(el => el.addEventListener('click', closeModals));
