@@ -90,22 +90,23 @@ h3{font-size:1.05rem;color:var(--primary-dark);font-weight:700;margin-bottom:.75
 .kpi--accent{border-top:3px solid var(--secondary-color)}
 .kpi--accent .kpi__value{color:var(--primary-color)}
 
-.dash-row{display:grid;grid-template-columns:1.4fr 1fr;gap:1rem;margin-bottom:1.25rem;align-items:start}
+.dash-row{display:grid;grid-template-columns:1.4fr 1fr;gap:1rem;margin-bottom:1.25rem;align-items:stretch}
+.dash-row--equal{grid-template-columns:1fr 1fr}
 .card--center{display:flex;flex-direction:column}
 .card--center .pie-wrap{flex:1}
 
 /* ----- Funil em formato real ----- */
-.funnel-wrap{display:grid;grid-template-columns:1.6fr 1fr;gap:1rem;align-items:start}
-.funnel-shape{display:flex;flex-direction:column;align-items:center;gap:4px}
+.funnel-wrap{display:grid;grid-template-columns:1fr 280px;gap:1.5rem;align-items:center}
+.funnel-shape{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%}
 .funnel-band{
-  height:34px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 .85rem;color:#fff;font-weight:600;font-size:.82rem;
-  clip-path: polygon(6% 0, 94% 0, 88% 100%, 12% 100%);
+  height:42px;display:flex;align-items:center;justify-content:center;gap:.7rem;
+  padding:0 2rem;color:#fff;font-weight:600;font-size:.88rem;line-height:1;
+  clip-path: polygon(3% 0, 97% 0, 93% 100%, 7% 100%);
   background:linear-gradient(180deg,var(--primary-light),var(--primary-color));
-  transition:width .3s;
+  transition:width .3s;white-space:nowrap;
 }
 .funnel-band .lbl{opacity:.95}
-.funnel-band .n{font-weight:800;font-variant-numeric:tabular-nums}
+.funnel-band .n{font-weight:800;font-variant-numeric:tabular-nums;background:rgba(255,255,255,.18);padding:.1rem .55rem;border-radius:99px;font-size:.82rem}
 .funnel-band:nth-child(1){background:linear-gradient(180deg,#7aa282,#588157)}
 .funnel-band:nth-child(2){background:linear-gradient(180deg,#6a9272,#4f7651)}
 .funnel-band:nth-child(3){background:linear-gradient(180deg,#5a8364,#476a48)}
@@ -114,15 +115,27 @@ h3{font-size:1.05rem;color:var(--primary-dark);font-weight:700;margin-bottom:.75
 .funnel-band:nth-child(6){background:linear-gradient(180deg,#345a3e,#2d4a2d)}
 .funnel-band:nth-child(7){background:linear-gradient(180deg,#2b4a32,#23391f)}
 
-.funnel-side{display:flex;flex-direction:column;gap:.5rem;padding-top:.5rem}
+.funnel-side{display:flex;flex-direction:column;gap:.5rem;align-self:center}
 .funnel-side__title{font-size:.7rem;font-weight:700;color:var(--dark-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem}
 .fs-row{
   display:flex;justify-content:space-between;align-items:center;
-  padding:.4rem .65rem;border-radius:6px;
+  padding:.5rem .8rem;border-radius:6px;
   background:#fdecef;border:1px solid #f3c4cb;color:#842029;
-  font-size:.78rem;font-weight:600;
+  font-size:.85rem;font-weight:700;
 }
-.fs-row .n{font-weight:800}
+.fs-row .n{font-weight:800;background:#fff;color:#842029;padding:.05rem .6rem;border-radius:99px;border:1px solid #f3c4cb}
+
+/* ----- Add funds modal ----- */
+.add-list{max-height:50vh;overflow-y:auto;border:1px solid var(--light-gray);border-radius:var(--radius)}
+.add-row{
+  display:grid;grid-template-columns:24px 1fr 60px 1.6fr;gap:.75rem;align-items:center;
+  padding:.55rem .8rem;border-bottom:1px solid var(--light-gray);cursor:pointer;
+  font-size:.85rem;font-weight:400;text-transform:none;letter-spacing:0;color:var(--black);
+}
+.add-row:last-child{border-bottom:none}
+.add-row:hover{background:#f4f8f5}
+.add-row input{margin:0;width:auto}
+.add-row .sm{font-size:.78rem;color:var(--dark-gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* pie chart */
 .pie-wrap{display:flex;gap:1rem;align-items:center;justify-content:center;flex:1;padding:.5rem 0}
