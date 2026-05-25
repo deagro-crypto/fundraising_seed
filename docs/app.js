@@ -72,6 +72,16 @@ async function reloadAll() {
   if (!state.activeRoundId && state.rounds[0]) state.activeRoundId = state.rounds[0].id;
 }
 
+async function withButtonLoading(btn, label, fn) {
+  if (!btn) return fn();
+  const orig = btn.innerHTML;
+  const wasDisabled = btn.disabled;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span>${label || 'Salvando…'}`;
+  try { return await fn(); }
+  finally { btn.innerHTML = orig; btn.disabled = wasDisabled; }
+}
+
 /* ---------- Helpers ---------- */
 const fmt = (n) => n ? 'US$ ' + Number(n).toLocaleString('en-US') : 'US$ 0';
 const $ = (s, el = document) => el.querySelector(s);
@@ -427,8 +437,10 @@ async function submitFund(e) {
     latam: form.latam.checked,
   };
   try {
-    await api.saveFund(payload);
-    await reloadAll();
+    await withButtonLoading($('#save-fund-btn'), 'Salvando…', async () => {
+      await api.saveFund(payload);
+      await reloadAll();
+    });
     closeModals();
     rerenderActiveView();
   } catch (e) { alert('Erro ao salvar: ' + e.message); }
@@ -439,8 +451,10 @@ async function deleteFund() {
   if (!id) return;
   if (!confirm('Excluir este fundo?')) return;
   try {
-    await api.deleteFund(id);
-    await reloadAll();
+    await withButtonLoading($('#delete-fund-btn'), 'Excluindo…', async () => {
+      await api.deleteFund(id);
+      await reloadAll();
+    });
     closeModals();
     rerenderActiveView();
   } catch (e) { alert('Erro ao excluir: ' + e.message); }
@@ -468,17 +482,20 @@ async function submitRound(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const documento = $$('#round-form input[name=documento]:checked').map(c => c.value);
+  const submitBtn = e.target.querySelector('button[type=submit]');
   try {
-    await api.saveRound({
-      id: fd.get('id') || null,
-      name: fd.get('name').trim(),
-      target: Number(fd.get('target')),
-      status: fd.get('status'),
-      equity_esperado: fd.get('equity_esperado') === '' ? null : Number(fd.get('equity_esperado')),
-      documento,
-      estrategia: (fd.get('estrategia') || '').trim(),
+    await withButtonLoading(submitBtn, 'Salvando…', async () => {
+      await api.saveRound({
+        id: fd.get('id') || null,
+        name: fd.get('name').trim(),
+        target: Number(fd.get('target')),
+        status: fd.get('status'),
+        equity_esperado: fd.get('equity_esperado') === '' ? null : Number(fd.get('equity_esperado')),
+        documento,
+        estrategia: (fd.get('estrategia') || '').trim(),
+      });
+      await reloadAll();
     });
-    await reloadAll();
     closeModals();
     rerenderActiveView();
   } catch (e) { alert('Erro ao salvar rodada: ' + e.message); }
@@ -550,9 +567,11 @@ async function confirmAddFunds() {
   const toRemove = [...initial].filter(id => !selection.has(id));
   if (!toAdd.length && !toRemove.length) return;
   try {
-    if (toAdd.length)    await api.addFundsToRound(roundId, toAdd);
-    if (toRemove.length) await api.removeFundsFromRound(roundId, toRemove);
-    await reloadAll();
+    await withButtonLoading($('#add-confirm'), 'Salvando…', async () => {
+      if (toAdd.length)    await api.addFundsToRound(roundId, toAdd);
+      if (toRemove.length) await api.removeFundsFromRound(roundId, toRemove);
+      await reloadAll();
+    });
     closeModals();
     rerenderActiveView();
   } catch (e) { alert('Erro ao atualizar fundos da rodada: ' + e.message); }
