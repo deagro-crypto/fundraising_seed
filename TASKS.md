@@ -1,6 +1,8 @@
 # Tasks
 
-## Pronto
+## MVP entregue e em produção 🚀
+
+Frontend rodando em https://deagro-crypto.github.io/fundraising_seed/, backend no Apps Script da DeAgro, advisor (Daniel) populando dados reais.
 
 ### Frontend (`docs/`)
 - [x] Dashboard com KPIs (target, capturado, em negociação, fundos adicionados à rodada)
@@ -12,10 +14,11 @@
 - [x] Página de Rodadas (lista) → clique abre detalhe da rodada
 - [x] Detalhe da rodada com card de progresso + Kanban (9 colunas, cards coloridos por tier, scroll interno)
 - [x] Modal de fundo: leitura → Editar → Salvar; campos completos incluindo Contato (nome/tel/email) e notas separadas DeAgro/Advisor
+- [x] Modal de fundo e rodada com footer fixo (botões sempre visíveis)
 - [x] Modal de rodada: nome, target, status, equity esperado, documento (SAFE/SAFT), estratégia
 - [x] Modal "Gerenciar fundos da rodada": pré-marca o que está, diff `+N −M` no botão
 - [x] Spinner in-button durante save/delete/add-remove
-- [x] Logo DeAgro no header
+- [x] Logo DeAgro no header + favicon
 - [x] Hospedado no GitHub Pages (`main/docs`)
 
 ### Backend (`app_script/`)
@@ -24,18 +27,15 @@
 - [x] `seedFunds()` importa os 40 fundos + cria rodada Seed 2026
 - [x] `ensureSheet_` aditivo (não destrói dados ao adicionar colunas no fim do schema)
 - [x] StatusLog automático em toda mudança de status
-- [x] Identificação automática de advisor via `ADVISOR_EMAILS`
+- [x] Identificação automática de advisor via `ADVISOR_EMAILS` (`daniel@kamea.com.br`)
+- [x] Endpoints `addFundsToRound` / `removeFundsFromRound` (bulk)
 - [x] Frontend conectado via fetch (POST text/plain pra evitar CORS preflight)
-
-## Em uso (sem dev ativo)
-
-- Advisor (Daniel) começou a popular teses reais via UI. CRUD funcionando ponta a ponta.
 
 ## Backlog / ideias
 
 ### Próximos prováveis
 - [ ] **Histórico de notas** (aba `Notes` já existe no DB) — listar com autor e timestamp dentro do modal do fundo, em vez dos dois campos de texto livre que sobrescrevem
-- [ ] **Log de status** visível no modal do fundo (cronologia de mudanças)
+- [ ] **Log de status** visível no modal do fundo (cronologia de mudanças, já gravado em `StatusLog`)
 - [ ] **Drag-and-drop no Kanban** para mudar status arrastando
 - [ ] **Compartilhar planilha** automaticamente com `daniel@kamea.com.br` via `DriveApp.addEditor()` num helper do backend
 - [ ] **Filtro por rodada** no catálogo de Fundos (atualmente mostra todos do universo)
