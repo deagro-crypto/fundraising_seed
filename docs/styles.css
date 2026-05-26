@@ -241,9 +241,9 @@ h3{font-size:1.05rem;color:var(--primary-dark);font-weight:700;margin-bottom:.75
 .filters input[type=search]{min-width:220px;flex:1}
 
 /* TABLE */
-.table-wrap{padding:0;display:flex;flex-direction:column}
-.table-scroll{overflow-x:auto;overflow-y:auto;max-height:65vh}
-.funds-table{width:100%;border-collapse:collapse;table-layout:auto;min-width:980px}
+.table-wrap{padding:0;display:flex;flex-direction:column;border:none;box-shadow:var(--shadow-sm)}
+.table-scroll{overflow-x:auto;overflow-y:auto;max-height:65vh;border:1px solid var(--primary-light);border-radius:var(--radius-lg) var(--radius-lg) 0 0;border-bottom:none}
+.funds-table{width:100%;border-collapse:collapse;table-layout:auto;min-width:1200px}
 .funds-table thead{position:sticky;top:0;z-index:2}
 .funds-table th.sortable{cursor:pointer;user-select:none}
 .funds-table th.sortable:hover{background:var(--primary-dark)}
@@ -254,7 +254,9 @@ h3{font-size:1.05rem;color:var(--primary-dark);font-weight:700;margin-bottom:.75
 /* PAGINATION */
 .pagination{
   display:flex;justify-content:space-between;align-items:center;gap:.75rem;
-  padding:.6rem 1rem;border-top:1px solid var(--light-gray);background:var(--off-white);
+  padding:.6rem 1rem;background:var(--off-white);
+  border:1px solid var(--primary-light);border-top:1px solid var(--light-gray);
+  border-radius:0 0 var(--radius-lg) var(--radius-lg);
   font-size:.82rem;color:var(--dark-gray);
 }
 .pagination__pages{display:flex;gap:.35rem;align-items:center}
@@ -267,10 +269,14 @@ h3{font-size:1.05rem;color:var(--primary-dark);font-weight:700;margin-bottom:.75
 .pagination button:disabled{opacity:.4;cursor:not-allowed}
 .pagination button.active{background:var(--primary-color);color:#fff;border-color:var(--primary-color)}
 .funds-table th,.funds-table td{
-  text-align:left;padding:.7rem .9rem;border-bottom:1px solid var(--light-gray);font-size:.86rem;vertical-align:middle;
+  text-align:left;padding:.7rem .9rem;border-bottom:1px solid var(--light-gray);font-size:.86rem;vertical-align:top;
   white-space:nowrap;
 }
-.funds-table td.cell-thesis{white-space:normal;max-width:380px;font-size:.8rem;color:var(--dark-gray)}
+.funds-table td.cell-thesis{
+  white-space:normal;font-size:.8rem;color:var(--dark-gray);
+  min-width:340px;max-width:480px;line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
 .funds-table th{background:var(--primary-color);color:#fff;font-weight:600;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:none}
 .funds-table th.right,.funds-table td.right{text-align:right;font-variant-numeric:tabular-nums}
 .funds-table tbody tr{cursor:pointer;transition:background .12s}
