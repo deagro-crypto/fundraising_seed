@@ -320,8 +320,9 @@ h3{font-size:1.05rem;color:var(--primary-dark);font-weight:700;margin-bottom:.75
 .modal__header h3{margin:0;color:var(--secondary-color);font-size:1rem;letter-spacing:.06em}
 .modal__header .icon-btn{color:var(--secondary-light);font-size:1.6rem}
 .modal__header .icon-btn:hover{background:rgba(255,255,255,.12);color:var(--secondary-color)}
-.modal__body{padding:1.25rem;overflow:auto;display:flex;flex-direction:column;gap:.85rem}
-.modal__footer{display:flex;gap:.5rem;justify-content:flex-end;border-top:1px solid var(--light-gray);padding:.85rem 1.25rem;margin-top:0;background:var(--off-white)}
+.modal__form{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.modal__body{padding:1.25rem;overflow:auto;display:flex;flex-direction:column;gap:.85rem;flex:1;min-height:0}
+.modal__footer{display:flex;gap:.5rem;justify-content:flex-end;border-top:1px solid var(--light-gray);padding:.85rem 1.25rem;margin-top:0;background:var(--off-white);flex-shrink:0}
 .modal__footer--split{justify-content:space-between}
 .btn--lg{padding:.7rem 1.5rem;font-size:.95rem}
 
