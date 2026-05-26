@@ -391,6 +391,9 @@ function openFundModal(id) {
     form.thesis.value = editing.thesis || '';
     form.notes_deagro.value = editing.notes_deagro || '';
     form.notes_advisor.value = editing.notes_advisor || '';
+    form.contact_name.value  = editing.contact_name  || '';
+    form.contact_phone.value = editing.contact_phone || '';
+    form.contact_email.value = editing.contact_email || '';
     $$('#fund-form input[name=focus]').forEach(c => c.checked = editing.focus.includes(c.value));
     form.latam.checked = !!editing.latam;
     setModalMode('view');
@@ -433,6 +436,9 @@ async function submitFund(e) {
     thesis: fd.get('thesis').trim(),
     notes_deagro: (fd.get('notes_deagro') || '').trim(),
     notes_advisor: (fd.get('notes_advisor') || '').trim(),
+    contact_name:  (fd.get('contact_name')  || '').trim(),
+    contact_phone: (fd.get('contact_phone') || '').trim(),
+    contact_email: (fd.get('contact_email') || '').trim(),
     focus,
     latam: form.latam.checked,
   };

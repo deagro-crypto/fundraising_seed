@@ -19,6 +19,7 @@ const Database = (function () {
       'thesis', 'notes_deagro', 'notes_advisor', 'owner',
       'round_ids',
       'created_at', 'updated_at',
+      'contact_name', 'contact_phone', 'contact_email',
     ],
     Rounds: [
       'id', 'name', 'target', 'currency', 'status',
@@ -77,15 +78,34 @@ const Database = (function () {
   function ensureSheet_(name, headers) {
     const ss = ss_();
     let sh = ss.getSheetByName(name);
-    if (!sh) sh = ss.insertSheet(name);
-    const range = sh.getRange(1, 1, 1, headers.length);
-    const current = sh.getLastColumn() ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0] : [];
-    const needWrite = headers.some((h, i) => current[i] !== h) || current.length !== headers.length;
-    if (needWrite) {
-      sh.clear();
-      range.setValues([headers]).setFontWeight('bold').setBackground('#3A5A40').setFontColor('#FFFFFF');
+    const headerStyle = (range) => range.setFontWeight('bold').setBackground('#3A5A40').setFontColor('#FFFFFF');
+
+    if (!sh) {
+      sh = ss.insertSheet(name);
+      headerStyle(sh.getRange(1, 1, 1, headers.length).setValues([headers]));
       sh.setFrozenRows(1);
+      return sh;
     }
+
+    const lastCol = sh.getLastColumn();
+    const current = lastCol ? sh.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+
+    // Caso aditivo: cabeçalhos atuais são prefixo dos novos → só adiciona colunas
+    const isAdditive = current.every((h, i) => h === headers[i]) && headers.length >= current.length;
+    if (isAdditive) {
+      if (headers.length > current.length) {
+        const added = headers.slice(current.length);
+        headerStyle(sh.getRange(1, current.length + 1, 1, added.length).setValues([added]));
+      }
+      sh.setFrozenRows(1);
+      return sh;
+    }
+
+    // Schema mudou estrutura — rebuild destrutivo (avisa nos logs)
+    Logger.log('Schema mudou em "%s" — rebuild destrutivo (dados perdidos).', name);
+    sh.clear();
+    headerStyle(sh.getRange(1, 1, 1, headers.length).setValues([headers]));
+    sh.setFrozenRows(1);
     return sh;
   }
 
@@ -154,6 +174,9 @@ const Database = (function () {
       round_ids: roundIds.join(';'),
       created_at: f.created_at || now_(),
       updated_at: now_(),
+      contact_name:  f.contact_name  || '',
+      contact_phone: f.contact_phone || '',
+      contact_email: f.contact_email || '',
     };
   }
 
@@ -182,6 +205,9 @@ const Database = (function () {
       round_ids: String(r.round_ids || '').split(';').filter(Boolean),
       created_at: r.created_at,
       updated_at: r.updated_at,
+      contact_name:  r.contact_name  || '',
+      contact_phone: r.contact_phone || '',
+      contact_email: r.contact_email || '',
     };
   }
 
