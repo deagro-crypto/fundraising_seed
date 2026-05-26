@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DeAgro · Fundraising CRM</title>
+<link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
 <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -219,7 +220,8 @@
         <h3 id="fund-modal-title">Fundo</h3>
         <button class="icon-btn" data-close>×</button>
       </div>
-      <form id="fund-form" class="modal__body">
+      <form id="fund-form" class="modal__form">
+        <div class="modal__body">
         <input type="hidden" name="id" />
         <div class="grid-2">
           <label>Nome
@@ -295,6 +297,7 @@
             <textarea name="notes_advisor" rows="3" placeholder="Notas do advisor"></textarea>
           </label>
         </div>
+        </div><!-- /modal__body -->
 
         <div class="modal__footer">
           <button type="button" class="btn-ghost" data-close>Fechar</button>
@@ -314,7 +317,8 @@
         <h3 id="round-modal-title">Nova rodada</h3>
         <button class="icon-btn" data-close>×</button>
       </div>
-      <form id="round-form" class="modal__body">
+      <form id="round-form" class="modal__form">
+        <div class="modal__body">
         <input type="hidden" name="id" />
         <label>Nome
           <input name="name" required placeholder="Seed 2026" />
@@ -341,6 +345,7 @@
         <label>Estratégia
           <textarea name="estrategia" rows="3" placeholder="Estratégia da rodada (tese, narrativa para fundos, prioridades)…"></textarea>
         </label>
+        </div><!-- /modal__body -->
         <div class="modal__footer">
           <button type="button" class="btn-ghost" data-close>Cancelar</button>
           <button type="submit" class="btn-primary">Salvar</button>
